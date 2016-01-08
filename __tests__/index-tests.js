@@ -1,6 +1,6 @@
 import test from 'ava';
 import 'babel-register';
-import optimistic, {BEGIN, COMMIT, REVERT} from '../src/index';
+import {optimistic, BEGIN, COMMIT, REVERT} from '../src/index';
 import {Map, List, is} from 'immutable';
 
 const counterReducer = (state = 0, action) => {
@@ -64,6 +64,19 @@ test('wraps a reducer', t => {
   t.true(is(actual.get('history'), expected.get('history')));
 });
 
+test('wraps a reducer with existing state', t => {
+  const enhancedReducer = optimistic(rootReducer);
+  const actual = enhancedReducer({counter: 5}, {});
+  const expected = Map({
+    history: List(),
+    current: {
+      counter: 5
+    }
+  });
+  t.same(actual.get('current'), expected.get('current'));
+  t.true(is(actual.get('history'), expected.get('history')));
+});
+
 test('wraps an immutable reducer', t => {
   const enhancedReducer = optimistic(rootReducerImmutable);
   const actual = enhancedReducer(undefined, {});
@@ -84,7 +97,9 @@ test('begin a transaction', t => {
   const expected = Map({
     history: List([{
       action,
-      beforeState: undefined
+      beforeState: {
+        counter: 0
+      }
     }]),
     current: {
       counter: 1
@@ -104,7 +119,9 @@ test('begin a second transaction', t => {
     history: List([
       {
         action: firstAction,
-        beforeState: undefined
+        beforeState: {
+          counter: 0
+        }
       },
       {
         action: secondAction,
@@ -130,7 +147,9 @@ test('begin a transaction, add a non-opt', t => {
     history: List([
       {
         action: begin0,
-        beforeState: undefined
+        beforeState: {
+          counter: 0
+        }
       },
       {
         action: nonOpt0
@@ -157,7 +176,9 @@ test('begin 2, add non-opt', t => {
     history: List([
       {
         action: begin0,
-        beforeState: undefined
+        beforeState: {
+          counter: 0
+        }
       },
       {
         action: begin1,
@@ -256,7 +277,9 @@ test('immediately revert a transaction', t => {
   const actual = enhancedReducer(firstState, revertAction);
   const expected = Map({
     history: List(),
-    current: undefined
+    current: {
+      counter: 0
+    }
   });
   t.true(is(actual.get('history'), expected.get('history')));
   t.same(actual.get('current'), expected.get('current'));
@@ -274,7 +297,9 @@ test('begin 2, revert the second', t => {
     history: List([
       {
         action: firstBegin,
-        beforeState: undefined
+        beforeState: {
+          counter: 0
+        }
       }
     ]),
     current: {
@@ -297,7 +322,9 @@ test('begin 2, revert the first', t => {
     history: List([
       {
         action: begin1,
-        beforeState: undefined
+        beforeState: {
+          counter: 0
+        }
       }
     ]),
     current: {
@@ -320,7 +347,9 @@ test('begin 2, revert the first, then the second', t => {
   const actual = enhancedReducer(thirdState, secondRevert);
   const expected = Map({
     history: List(),
-    current: undefined
+    current: {
+      counter: 0
+    }
   });
   t.true(is(actual.get('history'), expected.get('history')));
   t.same(actual.get('current'), expected.get('current'));
@@ -358,7 +387,9 @@ test('begin 2, add non-opt, revert first', t => {
     history: List([
       {
         action: begin1,
-        beforeState: undefined
+        beforeState: {
+          counter: 0
+        }
       },
       {
         action: nonOpt0

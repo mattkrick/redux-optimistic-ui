@@ -63,20 +63,21 @@ const getRevertState = (history, revertId, reducer) => {
   });
 };
 
-export default function optimistic(reducer, rawConfig = {}) {
+export const optimistic = (reducer, rawConfig = {}) => {
   const config = Object.assign({
     maxHistory: 100
   }, rawConfig);
+  let isReady = false;
 
-  const initialState = Map({
-    // optimistic items in history look like {action, beforeState}
-    // regular items look like {action}
-    history: List(),
-    current: undefined
-  });
-
-  return (state = initialState, action) => {
+  return (state, action) => {
     let historySize;
+    if (!isReady) {
+      isReady = true;
+      state = Map({
+        history: List(),
+        current: reducer(state, {})
+      });
+    }
     const metaAction = (action.meta && action.meta.optimistic) || {};
     switch (metaAction.type) {
       case BEGIN:
@@ -110,4 +111,15 @@ export default function optimistic(reducer, rawConfig = {}) {
         return state.set('current', reducer(state.get('current'), action));
     }
   };
-}
+};
+
+export const ensureState = state => {
+  if (Map.isMap(state)) {
+    if (List.isList(state.get('history'))) {
+      return state.get('current');
+    }
+  }
+  return state;
+};
+
+
