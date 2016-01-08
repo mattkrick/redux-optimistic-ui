@@ -48,7 +48,7 @@ Just wrap all your references to `state` and `getState` with it & you're all set
 
 ```
 import {ensureState} from 'redux-optimistic-ui'
-ensureState(getState()).counter
+ensureState(getState()).counter // equivalent of getState().counter without the enhancer
 ```
 
 ###Write some middleware
