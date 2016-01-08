@@ -5,19 +5,21 @@ export const COMMIT = '@@optimist/COMMIT';
 export const REVERT = '@@optimist/REVERT';
 
 const getCommitHistory = (history, commitId) => {
-  let started, committed;
+  let started;
+  let committed;
   const newHistory = history.reduce((mutHistory, entry) => {
-    if (!entry.hasOwnProperty('beforeState')) return started ? mutHistory.push(entry) : mutHistory;
+    if (!entry.hasOwnProperty('beforeState')) {
+      return started ? mutHistory.push(entry) : mutHistory;
+    }
     // Since we know the entry & action are optimistic, they have an id
     const matchesTransaction = entry.action.meta.optimistic.id === commitId;
     if (matchesTransaction) {
       committed = true;
       // If it's the first, don't store it in the newHistory, else, we can ditch the beforeState
       return started ? mutHistory.push({action: entry.action}) : mutHistory;
-    } else {
-      started = true;
-      return mutHistory.push(entry);
     }
+    started = true;
+    return mutHistory.push(entry);
   }, List());
   if (!committed) {
     console.error(`@@optimist: Failed commit. Transaction #${commitId} does not exist!`);
@@ -26,7 +28,9 @@ const getCommitHistory = (history, commitId) => {
 };
 
 const getRevertState = (history, revertId, reducer) => {
-  let started, gotInitialState, currentState;
+  let started;
+  let gotInitialState;
+  let currentState;
   const newHistory = history.reduce((mutHistory, entry) => {
     if (entry.hasOwnProperty('beforeState')) {
       const matchesTransaction = entry.action.meta.optimistic.id === revertId;
@@ -65,14 +69,14 @@ export default function optimistic(reducer, rawConfig = {}) {
   }, rawConfig);
 
   const initialState = Map({
-    //optimistic items in history look like {action, beforeState}
-    //regular items look like {action}
+    // optimistic items in history look like {action, beforeState}
+    // regular items look like {action}
     history: List(),
     current: undefined
   });
 
   return (state = initialState, action) => {
-    let current, history;
+    let historySize;
     const metaAction = (action.meta && action.meta.optimistic) || {};
     switch (metaAction.type) {
       case BEGIN:
@@ -90,21 +94,20 @@ export default function optimistic(reducer, rawConfig = {}) {
       case REVERT:
         return getRevertState(state.get('history'), metaAction.id, reducer);
       default:
-        console.log('in def');
-        const historySize = state.get('history').size;
+        historySize = state.get('history').size;
         if (historySize) {
           if (historySize > config.maxHistory) {
             console.error(`@@optimist: Possible memory leak detected.
               Verify all actions result in a commit or revert and
-              don't use optimistic-UI for long-running server fetches`)
+              don't use optimistic-UI for long-running server fetches`);
           }
           return state.withMutations(mutState => {
             mutState
               .set('history', state.get('history').push({action}))
               .set('current', reducer(state.get('current'), action));
-          })
+          });
         }
         return state.set('current', reducer(state.get('current'), action));
     }
-  }
+  };
 }
