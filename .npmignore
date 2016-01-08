@@ -1,4 +1,3 @@
-lib
-*.log
+src/
 node_modules
 .idea
