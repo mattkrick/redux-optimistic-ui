@@ -11,11 +11,12 @@ It can be your rootReducer (the output from a `combineReducers`) or a nested one
 ## How's it different from redux-optimist?
 This project is based heavily on the work of redux-optimist.
 redux-optimist is what I'd call a *reducerExtender*. It extends your state with an `optimist`.
-`redux-optimistic-ui` wraps your state. It's also FSA-compliant (if you care about that kinda thing)
+`redux-optimistic-ui` wraps your state.
 Behind the scenes, it uses immutable.js for a little speed boost.
 
 This has a few advantages:
-- You can use `immutable` (or whatever the heck else you want, weirdo)
+- Your state doesn't have to be a plain JS Object. You can use an immutable.js `Map` (or whatever the heck else you want, weirdo)
+- It's FSA-compliant (if you care about that kinda thing)
 - More performant, thanks to immutable.js (although if your queue is long enough to see gains, you're probably doing it wrong).
 - If you're really performance driven, you could ignore certain items from going in the queue (eg toggles, css effects, etc.)
 
