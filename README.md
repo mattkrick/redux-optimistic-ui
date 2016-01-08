@@ -7,6 +7,8 @@ a reducer enhancer to enable type-agnostic optimistic updates
 ## A what-now?
 A reducer enhance is a function you put around a reducer. 
 It can be your rootReducer (the output from a `combineReducers`) or a nested one.
+Optimistic-UI means you update what the client sees before the result comes back from the server.
+This makes your app feel super fast, regardless of server location or internet connection speed.
 
 ## How's it different from redux-optimist?
 This project is based heavily on the work of redux-optimist.
