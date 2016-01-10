@@ -14,14 +14,14 @@ This makes your app feel super fast, regardless of server location or internet c
 
 ## How's it different from redux-optimist?
 
-| redux-optimist                                                    | redux-optimistic-ui                                    |
-|-------------------------------------------------------------------|--------------------------------------------------------|
-| reducerExtender (adds an optimist to your state)                  | reducerEnhancer (wraps your state in an immutable Map) |
-| must use plain JS objects for your state                          | can use immutable.js or anything else                  |
-| saves an extra copy of your state for every new optimistic action | only uses 1 state copy                                 |
-| uses native JS objects behind the scenes                          | uses immutable.js behind the scenes                    |
-| no change necessary to get your state                             | must wrap your state calls in `ensureState`            |ou're really performance driven, you could ignore certain items from going in the queue (eg toggles, css effects, etc.)
-
+| redux-optimistic-ui                                    | redux-optimist                                                    |
+|--------------------------------------------------------|-------------------------------------------------------------------|
+| reducerEnhancer (wraps your state in an immutable Map) | reducerExtender (adds an optimist to your state)                  |
+| can use immutable.js or anything else                  | must use plain JS objects for your state                          |
+| only uses 1 state copy                                 | saves an extra copy of your state for every new optimistic action |
+| uses immutable.js behind the scenes                    | uses native JS objects behind the scenes                          |
+| FSA compliant                                          | not FSA compliant                                                 |
+| must wrap your state calls in `ensureState`            | no change necessary to get your state                             |
 ##Usage
 
 ###Feed it your reducer
