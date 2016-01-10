@@ -30,6 +30,7 @@ return optimistic(reducer);
 ```
 
 This will transform your state so it looks like this:
+
 ```
 state = Map({
   history: List(),
