@@ -7,25 +7,116 @@ a reducer enhancer to enable type-agnostic optimistic updates
 ## A what-now?
 A reducer enhance is a function you put around a reducer. 
 It can be your rootReducer (the output from a `combineReducers`) or a nested one.
+Optimistic-UI means you update what the client sees before the result comes back from the server.
+This makes your app feel super fast, regardless of server location or internet connection speed.
 
 ## How's it different from redux-optimist?
-redux-optimist is what I'd call a *reducerExtender*. It extends your reducers with an `optimist`.
-`redux-optimistic-ui` wraps your state. 
-Behind the scenes, it also uses `immutable`.
 
-This has a few advantages:
-- You can use `immutable` (or whatever the heck else you want, weirdo)
-- More performant, thanks to `immutable` (although if your queue is long enough to see gains, you're probably doing it wrong).
-- If you're really performance driven, you could ignore certain items from going in the queue (eg toggles, css effects, etc.)
+| redux-optimist                                                    | redux-optimistic-ui                                    |
+|-------------------------------------------------------------------|--------------------------------------------------------|
+| reducerExtender (adds an optimist to your state)                  | reducerEnhancer (wraps your state in an immutable Map) |
+| must use plain JS objects for your state                          | can use immutable.js or anything else                  |
+| saves an extra copy of your state for every new optimistic action | only uses 1 state copy                                 |
+| uses native JS objects behind the scenes                          | uses immutable.js behind the scenes                    |
+| no change necessary to get your state                             | must wrap your state calls in `ensureState`            |ou're really performance driven, you could ignore certain items from going in the queue (eg toggles, css effects, etc.)
 
 ##Usage
-Here's how your state will look
+
+###Feed it your reducer
+
 ```
-wrappedState = Map({
+import {optimistic} from 'redux-optimistic-ui';
+return optimistic(reducer);
+```
+
+This will transform your state so it looks like this:
+```
+state = Map({
   history: List(),
+  beforeState: <YOUR PREVIOUS STATE HERE>
   current: <YOUR STATE HERE>
 })
 ```
-*Note: this means you gotta update your references from `state` to `state.get('current')`*
+If the client is waiting for a response from the server, the following are guaranteed to be true:
+- `state.get('history').size === 0`
+- `state.get('beforeState') === undefined`
+That's the only time you'll ever need to access those props.
 
-...to be continued
+###Update your references to `state`
+
+Since your state is now wrapped, you need `state.get('current')`. 
+But that sucks. What if you don't enhance the state until the user hits a certain route?
+Lucky you! There's a function for that. `ensureState` will give you your state whether it's enhanced or not.
+Just wrap all your references to `state` and `getState` with it & you're all set!
+
+```
+// Before
+getState().counter
+
+// After (whether you've enhanced your reducer or not)
+import {ensureState} from 'redux-optimistic-ui'
+ensureState(getState()).counter
+```
+
+###Write some middleware
+
+Now comes the fun! Not all of your actions should be optimistic. 
+Just the ones that fetch something from a server *and have a high probability of success*.
+I like real-world examples, so this middleware is a little bit longer than the bare requirements:
+
+```
+import {BEGIN, COMMIT, REVERT} from 'redux-optimistic-ui';
+
+//All my redux action types that are optimistic have the following suffixes, yours may vary
+const _SUCCESS = '_SUCCESS';
+const _ERROR = '_ERROR';
+
+//Each optimistic item will need a transaction Id to internally match the BEGIN to the COMMIT/REVERT 
+let nextTransactionID = 0;
+
+// That crazy redux middleware that's 3 functions deep!
+export default store => next => action => {
+  // FSA compliant
+  const {type, meta, payload} = action;
+  
+  // For actions that have a high probability of failing, I don't set the flag
+  if (!meta || !meta.isOptimistic) return next(action);
+
+  // Now that we know we're optimistically updating the item, give it an ID
+  let transactionID = nextTransactionID++;
+
+  // Extend the action.meta to let it know we're beginning an optimistic update
+  next(Object.assign({}, action, {meta: {optimistic: {type: BEGIN, id: transactionID}}}));
+
+  // HTTP is boring, I like sending data over sockets, the 3rd arg is a callback 
+  socket.emit(type, payload, error => {
+    // Create a redux action based on the result of the callback 
+    next({
+      type: type + (error ? _ERROR : _SUCCESS),
+      error,
+      payload,
+      meta: {
+        //Here's the magic: if there was an error, revert the state, otherwise, commit it
+        optimistic: error ? {type: REVERT, id: transactionID} : {type: COMMIT, id: transactionID}
+      }
+    });
+  })
+};
+```
+
+##Pro tips
+Not using an optimistic-ui until a certain route? Using something like `redux-undo` in other parts? Write a little something like this and call it on your asychronous route:
+
+```
+export default (newReducers, reducerEnhancers) => {
+  Object.assign(currentReducers, newReducers);
+  const reducer = combineReducers({...currentReducers})
+  if (reducerEnhancers){
+    return Array.isArray(reducerEnhancers) ? compose(...reducerEnhancers)(reducer) : reducerEnhancers(reducer);
+  }
+  return reducer;
+}
+```
+Now you get an enhanced reducer only where you want it. Neat.
+
+To see how it all comes together, check out https://github.com/mattkrick/meatier.

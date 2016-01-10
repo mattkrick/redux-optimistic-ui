@@ -13,29 +13,9 @@ const counterReducer = (state = 0, action) => {
       return state
   }
 };
-const rootReducer = (state = {}, action) => {
-  return {
-    counter: counterReducer(state.counter, action)
-  }
-};
-
-const rootReducerImmutable = (state = Map(), action) => {
-  return Map({
-    counter: counterReducer(state.get('counter'), action)
-  })
-};
-
-const makeAction = (type, metaType, id) => {
-  return {
-    type,
-    meta: {
-      optimistic: {
-        type: metaType,
-        id
-      }
-    }
-  };
-};
+const rootReducer = (state = {}, action) => ({counter: counterReducer(state.counter, action)});
+const rootReducerImmutable = (state = Map(), action) => Map({counter: counterReducer(state.get('counter'), action)});
+const makeAction = (type, metaType, id) => ({type, meta: {optimistic: {type: metaType, id}}});
 
 /*Meta tests*/
 test('test rootReducer works OK', t => {
@@ -55,38 +35,33 @@ test('wraps a reducer', t => {
   const enhancedReducer = optimistic(rootReducer);
   const actual = enhancedReducer(undefined, {});
   const expected = Map({
+    beforeState: undefined,
     history: List(),
-    current: {
-      counter: 0
-    }
+    current: {counter: 0}
   });
-  t.same(actual.get('current'), expected.get('current'));
-  t.true(is(actual.get('history'), expected.get('history')));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('wraps a reducer with existing state', t => {
   const enhancedReducer = optimistic(rootReducer);
   const actual = enhancedReducer({counter: 5}, {});
   const expected = Map({
+    beforeState: undefined,
     history: List(),
-    current: {
-      counter: 5
-    }
+    current: {counter: 5}
   });
-  t.same(actual.get('current'), expected.get('current'));
-  t.true(is(actual.get('history'), expected.get('history')));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('wraps an immutable reducer', t => {
   const enhancedReducer = optimistic(rootReducerImmutable);
   const actual = enhancedReducer(undefined, {});
   const expected = Map({
+    beforeState: undefined,
     history: List(),
-    current: Map({
-      counter: 0
-    })
+    current: Map({counter: 0})
   });
-  t.true(is(actual.current, expected.current));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 /*BEGIN*/
@@ -95,46 +70,25 @@ test('begin a transaction', t => {
   const action = makeAction('INC', BEGIN, 0);
   const actual = enhancedReducer(undefined, action);
   const expected = Map({
-    history: List([{
-      action,
-      beforeState: {
-        counter: 0
-      }
-    }]),
-    current: {
-      counter: 1
-    }
+    beforeState: {counter: 0},
+    history: List.of(action),
+    current: {counter: 1}
   });
-  t.same(actual.get('history').get(0), expected.get('history').get(0));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin a second transaction', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const firstAction = makeAction('INC', BEGIN, 0);
-  const secondAction = makeAction('INC', BEGIN, 1);
-  const firstState = enhancedReducer(undefined, firstAction);
-  const actual = enhancedReducer(firstState, secondAction);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const begin1 = makeAction('INC', BEGIN, 1);
+  const state1 = enhancedReducer(undefined, begin0);
+  const actual = enhancedReducer(state1, begin1);
   const expected = Map({
-    history: List([
-      {
-        action: firstAction,
-        beforeState: {
-          counter: 0
-        }
-      },
-      {
-        action: secondAction,
-        beforeState: firstState.get('current')
-      }
-    ]),
-    current: {
-      counter: 2
-    }
+    beforeState: {counter: 0},
+    history: List.of(begin0, begin1),
+    current: {counter: 2}
   });
-  t.same(actual.get('history').get(0), expected.get('history').get(0));
-  t.same(actual.get('history').get(1), expected.get('history').get(1));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin a transaction, add a non-opt', t => {
@@ -144,24 +98,11 @@ test('begin a transaction, add a non-opt', t => {
   const state1 = enhancedReducer(undefined, begin0);
   const actual = enhancedReducer(state1, nonOpt0);
   const expected = Map({
-    history: List([
-      {
-        action: begin0,
-        beforeState: {
-          counter: 0
-        }
-      },
-      {
-        action: nonOpt0
-      }
-    ]),
-    current: {
-      counter: 0
-    }
+    beforeState: {counter: 0},
+    history: List.of(begin0, nonOpt0),
+    current: {counter: 0}
   });
-  t.same(actual.get('history').get(0), expected.get('history').get(0));
-  t.same(actual.get('history').get(1), expected.get('history').get(1));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin 2, add non-opt', t => {
@@ -173,141 +114,92 @@ test('begin 2, add non-opt', t => {
   const state2 = enhancedReducer(state1, begin1);
   const actual = enhancedReducer(state2, nonOpt0);
   const expected = Map({
-    history: List([
-      {
-        action: begin0,
-        beforeState: {
-          counter: 0
-        }
-      },
-      {
-        action: begin1,
-        beforeState: state1.get('current')
-      },
-      {
-        action: nonOpt0
-      }
-    ]),
-    current: {
-      counter: 1
-    }
+    beforeState: {counter: 0},
+    history: List.of(begin0, begin1, nonOpt0),
+    current: {counter: 1}
   });
-  t.same(actual.get('history').get(0), expected.get('history').get(0));
-  t.same(actual.get('history').get(1), expected.get('history').get(1));
-  t.same(actual.get('history').get(2), expected.get('history').get(2));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 
 /*COMMIT*/
 test('immediately commit a transaction', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const beginAction = makeAction('INC', BEGIN, 0);
-  const firstState = enhancedReducer(undefined, beginAction);
-  const commitAction = makeAction('--', COMMIT, 0);
-  const actual = enhancedReducer(firstState, commitAction);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const state1 = enhancedReducer(undefined, begin0);
+  const commit0 = makeAction('--', COMMIT, 0);
+  const actual = enhancedReducer(state1, commit0);
   const expected = Map({
+    beforeState: undefined,
     history: List(),
-    current: {
-      counter: 1
-    }
+    current: {counter: 1}
   });
-  t.true(is(actual.get('history'), expected.get('history')));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin 2, commit the first', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const firstBegin = makeAction('INC', BEGIN, 0);
-  const secondBegin = makeAction('INC', BEGIN, 1);
-  const firstCommit = makeAction('--', COMMIT, 0);
-  const firstState = enhancedReducer(undefined, firstBegin);
-  const secondState = enhancedReducer(firstState, secondBegin);
-  const actual = enhancedReducer(secondState, firstCommit);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const begin1 = makeAction('INC', BEGIN, 1);
+  const commit0 = makeAction('--', COMMIT, 0);
+  const state1 = enhancedReducer(undefined, begin0);
+  const state2 = enhancedReducer(state1, begin1);
+  const actual = enhancedReducer(state2, commit0);
   const expected = Map({
-    history: List([
-      {
-        action: secondBegin,
-        beforeState: firstState.get('current')
-      }
-    ]),
-    current: {
-      counter: 2
-    }
+    beforeState: state1.get('current'),
+    history: List.of(begin1),
+    current: {counter: 2}
   });
-  t.same(actual.get('history').get(0), expected.get('history').get(0));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin 2, add non-opt action, commit the first', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const firstBegin = makeAction('INC', BEGIN, 0);
-  const secondBegin = makeAction('INC', BEGIN, 1);
-  const firstNonOpt = {type: 'DEC'};
-  const firstCommit = makeAction('--', COMMIT, 0);
-  const firstState = enhancedReducer(undefined, firstBegin);
-  const secondState = enhancedReducer(firstState, secondBegin);
-  const thirdState = enhancedReducer(secondState, firstNonOpt);
-  const actual = enhancedReducer(thirdState, firstCommit);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const begin1 = makeAction('INC', BEGIN, 1);
+  const nonOpt0 = {type: 'DEC'};
+  const commit0 = makeAction('--', COMMIT, 0);
+  const state1 = enhancedReducer(undefined, begin0);
+  const state2 = enhancedReducer(state1, begin1);
+  const state3 = enhancedReducer(state2, nonOpt0);
+  const actual = enhancedReducer(state3, commit0);
   const expected = Map({
-    history: List([
-      {
-        action: secondBegin,
-        beforeState: firstState.get('current')
-      },
-      {
-        action: firstNonOpt
-      }
-    ]),
-    current: {
-      counter: 1
-    }
+    beforeState: state1.get('current'),
+    history: List.of(begin1, nonOpt0),
+    current: {counter: 1}
   });
-  t.same(actual.get('history').get(0), expected.get('history').get(0));
-  t.same(actual.get('history').get(1), expected.get('history').get(1));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
-/*REVERT*/
+///*REVERT*/
 test('immediately revert a transaction', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const beginAction = makeAction('INC', BEGIN, 0);
-  const firstState = enhancedReducer(undefined, beginAction);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const state1 = enhancedReducer(undefined, begin0);
   const revertAction = makeAction('--', REVERT, 0);
-  const actual = enhancedReducer(firstState, revertAction);
+  const actual = enhancedReducer(state1, revertAction);
   const expected = Map({
+    beforeState: undefined,
     history: List(),
-    current: {
-      counter: 0
-    }
+    current: {counter: 0}
   });
-  t.true(is(actual.get('history'), expected.get('history')));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin 2, revert the second', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const firstBegin = makeAction('INC', BEGIN, 0);
-  const secondBegin = makeAction('INC', BEGIN, 1);
-  const firstRevert = makeAction('--', REVERT, 1);
-  const firstState = enhancedReducer(undefined, firstBegin);
-  const secondState = enhancedReducer(firstState, secondBegin);
-  const actual = enhancedReducer(secondState, firstRevert);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const begin1 = makeAction('INC', BEGIN, 1);
+  const revert0 = makeAction('--', REVERT, 1);
+  const state1 = enhancedReducer(undefined, begin0);
+  const state2 = enhancedReducer(state1, begin1);
+  const actual = enhancedReducer(state2, revert0);
   const expected = Map({
-    history: List([
-      {
-        action: firstBegin,
-        beforeState: {
-          counter: 0
-        }
-      }
-    ]),
-    current: {
-      counter: 1
-    }
+    beforeState: {counter: 0},
+    history: List.of(begin0),
+    current: {counter: 1}
   });
-  t.same(actual.get('history').get(0), expected.get('history').get(0));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin 2, revert the first', t => {
@@ -319,40 +211,29 @@ test('begin 2, revert the first', t => {
   const state2 = enhancedReducer(state1, begin1);
   const actual = enhancedReducer(state2, revert0);
   const expected = Map({
-    history: List([
-      {
-        action: begin1,
-        beforeState: {
-          counter: 0
-        }
-      }
-    ]),
-    current: {
-      counter: 1
-    }
+    beforeState: {counter: 0},
+    history: List.of(begin1),
+    current: {counter: 1}
   });
-  t.same(actual.get('history').get(0), expected.get('history').get(0));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin 2, revert the first, then the second', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const firstBegin = makeAction('INC', BEGIN, 0);
-  const secondBegin = makeAction('INC', BEGIN, 1);
-  const firstRevert = makeAction('--', REVERT, 0);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const begin1 = makeAction('INC', BEGIN, 1);
+  const revert0 = makeAction('--', REVERT, 0);
   const secondRevert = makeAction('--', REVERT, 1);
-  const firstState = enhancedReducer(undefined, firstBegin);
-  const secondState = enhancedReducer(firstState, secondBegin);
-  const thirdState = enhancedReducer(secondState, firstRevert);
-  const actual = enhancedReducer(thirdState, secondRevert);
+  const state1 = enhancedReducer(undefined, begin0);
+  const state2 = enhancedReducer(state1, begin1);
+  const state3 = enhancedReducer(state2, revert0);
+  const actual = enhancedReducer(state3, secondRevert);
   const expected = Map({
+    beforeState: undefined,
     history: List(),
-    current: {
-      counter: 0
-    }
+    current: {counter: 0}
   });
-  t.true(is(actual.get('history'), expected.get('history')));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin 1, add non-opt, revert it', t => {
@@ -360,17 +241,15 @@ test('begin 1, add non-opt, revert it', t => {
   const begin0 = makeAction('INC', BEGIN, 0);
   const nonOpt0 = {type: 'DEC'};
   const revert0 = makeAction('--', REVERT, 0);
-  const firstState = enhancedReducer(undefined, begin0);
-  const secondState = enhancedReducer(firstState, nonOpt0);
-  const actual = enhancedReducer(secondState, revert0);
+  const state1 = enhancedReducer(undefined, begin0);
+  const state2 = enhancedReducer(state1, nonOpt0);
+  const actual = enhancedReducer(state2, revert0);
   const expected = Map({
+    beforeState: undefined,
     history: List(),
-    current: {
-      counter: -1
-    }
+    current: {counter: -1}
   });
-  t.true(is(actual.get('history'), expected.get('history')));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin 2, add non-opt, revert first', t => {
@@ -384,44 +263,57 @@ test('begin 2, add non-opt, revert first', t => {
   const state3 = enhancedReducer(state2, nonOpt0);
   const actual = enhancedReducer(state3, revert0);
   const expected = Map({
-    history: List([
-      {
-        action: begin1,
-        beforeState: {
-          counter: 0
-        }
-      },
-      {
-        action: nonOpt0
-      }
-    ]),
-    current: {
-      counter: 0
-    }
+    beforeState: {counter: 0},
+    history: List.of(begin1,nonOpt0),
+    current: {counter: 0}
   });
-  t.same(actual.get('history').get(0), expected.get('history').get(0));
-  t.same(actual.get('history').get(1), expected.get('history').get(1));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
 });
 
 test('begin 2, add non-opt, revert the first, commit the second', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const firstBegin = makeAction('INC', BEGIN, 0);
-  const secondBegin = makeAction('INC', BEGIN, 1);
-  const firstNonOpt = {type: 'DEC'};
-  const firstRevert = makeAction('--', REVERT, 0);
-  const firstCommit = makeAction('--', COMMIT, 1);
-  const firstState = enhancedReducer(undefined, firstBegin);
-  const secondState = enhancedReducer(firstState, secondBegin);
-  const thirdState = enhancedReducer(secondState, firstNonOpt);
-  const fourthState = enhancedReducer(thirdState, firstRevert);
-  const actual = enhancedReducer(fourthState, firstCommit);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const begin1 = makeAction('INC', BEGIN, 1);
+  const nonOpt0 = {type: 'DEC'};
+  const revert0 = makeAction('--', REVERT, 0);
+  const commit0 = makeAction('--', COMMIT, 1);
+  const state1 = enhancedReducer(undefined, begin0);
+  const state2 = enhancedReducer(state1, begin1);
+  const state3 = enhancedReducer(state2, nonOpt0);
+  const fourthState = enhancedReducer(state3, revert0);
+  const actual = enhancedReducer(fourthState, commit0);
   const expected = Map({
+    beforeState: undefined,
     history: List(),
-    current: {
-      counter: 0
-    }
+    current: {counter: 0}
   });
-  t.true(is(actual.get('history'), expected.get('history')));
-  t.same(actual.get('current'), expected.get('current'));
+  t.same(actual.toJS(), expected.toJS());
+});
+
+test('real world', t => {
+  const enhancedReducer = optimistic(rootReducer);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const begin1 = makeAction('INC', BEGIN, 1);
+  const nonOpt0 = {type: 'DEC'};
+  const revert0 = makeAction('--', REVERT, 0);
+  const nonOpt1 = {type: 'DEC'};
+  const begin2 = makeAction('DEC', BEGIN, 2);
+  const commit0 = makeAction('--', COMMIT, 1);
+  const nonOpt2 = {type: 'DEC'};
+  const revert2 = makeAction('--', REVERT, 2);
+  const state1 = enhancedReducer(undefined, begin0);
+  const state2 = enhancedReducer(state1, begin1);
+  const state3 = enhancedReducer(state2, nonOpt0);
+  const state4 = enhancedReducer(state3, revert0);
+  const state5 = enhancedReducer(state4, nonOpt1);
+  const state6 = enhancedReducer(state5, begin2);
+  const state7 = enhancedReducer(state6, commit0);
+  const state8 = enhancedReducer(state7, nonOpt2);
+  const actual = enhancedReducer(state8, revert2);
+  const expected = Map({
+    beforeState: undefined,
+    history: List(),
+    current: {counter: -2}
+  });
+  t.same(actual.toJS(), expected.toJS());
 });

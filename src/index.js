@@ -4,62 +4,82 @@ export const BEGIN = '@@optimist/BEGIN';
 export const COMMIT = '@@optimist/COMMIT';
 export const REVERT = '@@optimist/REVERT';
 
-const getCommitHistory = (history, commitId) => {
-  let started;
-  let committed;
-  const newHistory = history.reduce((mutHistory, entry) => {
-    if (!entry.hasOwnProperty('beforeState')) {
-      return started ? mutHistory.push(entry) : mutHistory;
+const applyCommit = (state, commitId, reducer) => {
+  const history = state.get('history');
+  // If the action to commit is the first in the queue (most common scenario)
+  if (history.first().meta.optimistic.id === commitId) {
+    const historyWithoutCommit = history.shift();
+    const nextOptimisticIndex = historyWithoutCommit.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id);
+    // If this is the only optimistic item in the queue, we're done!
+    if (nextOptimisticIndex === -1) {
+      return state.withMutations(mutState => {
+        mutState
+          .set('history', List())
+          .set('beforeState', undefined)
+      });
     }
-    // Since we know the entry & action are optimistic, they have an id
-    const matchesTransaction = entry.action.meta.optimistic.id === commitId;
-    if (matchesTransaction) {
-      committed = true;
-      // If it's the first, don't store it in the newHistory, else, we can ditch the beforeState
-      return started ? mutHistory.push({action: entry.action}) : mutHistory;
+    // Create a new history starting with the next one
+    const newHistory = historyWithoutCommit.skip(nextOptimisticIndex);
+    // And run every action up until that next one to get the new beforeState
+    const newBeforeState = history.reduce((mutState, action, index) => {
+      return index <= nextOptimisticIndex ? reducer(mutState, action) : mutState;
+    }, state.get('beforeState'));
+    return state.withMutations(mutState => {
+      mutState
+        .set('history', newHistory)
+        .set('beforeState', newBeforeState)
+    });
+  } else {
+    // If the committed action isn't the first in the queue, find out where it is
+    const actionToCommit = history.findEntry(action => action.meta && action.meta.optimistic && action.meta.optimistic.id === commitId);
+    if (!actionToCommit) {
+      console.error(`@@optimist: Failed commit. Transaction #${commitId} does not exist!`);
     }
-    started = true;
-    return mutHistory.push(entry);
-  }, List());
-  if (!committed) {
-    console.error(`@@optimist: Failed commit. Transaction #${commitId} does not exist!`);
+    // Make it a regular non-optimistic action
+    const newAction = Object.assign({}, actionToCommit[1], {
+      meta: Object.assign({}, actionToCommit[1].meta,
+        {optimistic: null})
+    });
+    return state.set('history', state.get('history').set(actionToCommit[0], newAction))
   }
-  return newHistory;
 };
 
-const getRevertState = (history, revertId, reducer) => {
-  let started;
-  let gotInitialState;
-  let currentState;
-  const newHistory = history.reduce((mutHistory, entry) => {
-    if (entry.hasOwnProperty('beforeState')) {
-      const matchesTransaction = entry.action.meta.optimistic.id === revertId;
-      if (matchesTransaction) {
-        currentState = entry.beforeState;
-        // It's possible the currentState could be set to undefined by a reducer, so this is necessary
-        gotInitialState = true;
-        return mutHistory;
-      }
-      started = true;
-      if (gotInitialState) {
-        const ret = mutHistory.push({
-          beforeState: currentState,
-          action: entry.action
-        });
-        currentState = reducer(currentState, entry.action);
-        return ret;
-      }
-      return mutHistory.push(entry);
+const applyRevert = (state, revertId, reducer) => {
+  const history = state.get('history');
+  const beforeState = state.get('beforeState');
+  let newHistory;
+  let newBeforeState;
+  // If the action to revert is the first in the queue (most common scenario)
+  if (history.first().meta.optimistic.id === revertId) {
+    const historyWithoutRevert = history.shift();
+    const nextOptimisticIndex = historyWithoutRevert.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id);
+    // If this is the only optimistic action in the queue, we're done!
+    if (nextOptimisticIndex === -1) {
+      return state.withMutations(mutState => {
+        mutState
+          .set('history', List())
+          .set('current', historyWithoutRevert.reduce((mutState, action) => reducer(mutState, action), beforeState))
+          .set('beforeState', undefined)
+      });
     }
-    currentState = gotInitialState ? reducer(currentState, entry.action) : currentState;
-    return started ? mutHistory.push(entry) : mutHistory;
-  }, List());
-  if (!gotInitialState) {
-    console.error(`@@optimist: Failed revert. Transaction #${revertId} does not exist!`);
+    newHistory = historyWithoutRevert.skip(nextOptimisticIndex);
+    newBeforeState = beforeState;
+  } else {
+    const indexToRevert = history.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id === revertId);
+    if (indexToRevert === -1) {
+      console.error(`@@optimist: Failed revert. Transaction #${revertId} does not exist!`);
+    }
+    newHistory = history.delete(indexToRevert);
+    newBeforeState = beforeState;
   }
-  return Map({
-    current: currentState,
-    history: newHistory
+  const newCurrent = newHistory.reduce((mutState, action) => {
+    return reducer(mutState, action)
+  }, beforeState);
+  return state.withMutations(mutState => {
+    mutState
+      .set('history', newHistory)
+      .set('current', newCurrent)
+      .set('beforeState', newBeforeState)
   });
 };
 
@@ -70,32 +90,34 @@ export const optimistic = (reducer, rawConfig = {}) => {
   let isReady = false;
 
   return (state, action) => {
-    let historySize;
     if (!isReady) {
       isReady = true;
       state = Map({
         history: List(),
-        current: reducer(state, {})
+        current: reducer(state, {}),
+        beforeState: undefined
       });
     }
+    const historySize = state.get('history').size;
     const metaAction = (action.meta && action.meta.optimistic) || {};
-    switch (metaAction.type) {
+    let {type, id} = metaAction;
+    if (type === BEGIN && historySize) {
+      // Don't save a second state
+      type = null;
+    }
+    switch (type) {
       case BEGIN:
         return state.withMutations(mutState => {
           mutState
-            .set('history', state.get('history').push({action, beforeState: state.get('current')}))
-            .set('current', reducer(state.get('current'), action));
+            .set('history', state.get('history').push(action))
+            .set('current', reducer(state.get('current'), action))
+            .set('beforeState', state.get('current'))
         });
       case COMMIT:
-        return state.withMutations(mutState => {
-          mutState
-            .set('history', getCommitHistory(state.get('history'), metaAction.id))
-            .set('current', reducer(state.get('current'), action));
-        });
+        return applyCommit(state, id, reducer);
       case REVERT:
-        return getRevertState(state.get('history'), metaAction.id, reducer);
+        return applyRevert(state, id, reducer);
       default:
-        historySize = state.get('history').size;
         if (historySize) {
           if (historySize > config.maxHistory) {
             console.error(`@@optimist: Possible memory leak detected.
@@ -104,7 +126,7 @@ export const optimistic = (reducer, rawConfig = {}) => {
           }
           return state.withMutations(mutState => {
             mutState
-              .set('history', state.get('history').push({action}))
+              .set('history', state.get('history').push(action))
               .set('current', reducer(state.get('current'), action));
           });
         }
