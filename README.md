@@ -1,3 +1,5 @@
+[![npm version](https://badge.fury.io/js/redux-optimistic-ui.svg)](https://badge.fury.io/js/redux-optimistic-ui)
+
 # redux-optimistic-ui
 a reducer enhancer to enable type-agnostic optimistic updates
 
