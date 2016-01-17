@@ -40,10 +40,11 @@ state = Map({
   current: <YOUR STATE HERE>
 })
 ```
-If the client is waiting for a response from the server, the following are guaranteed to be true:
+If the client is not waiting for a response from the server, the following are guaranteed to be true:
 - `state.get('history').size === 0`
 - `state.get('beforeState') === undefined`
-That's the only time you'll ever need to access those props.
+
+If you don't need to know if there is an outstanding fetch, you'll never need to use these.
 
 ###Update your references to `state`
 
