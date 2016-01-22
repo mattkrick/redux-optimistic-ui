@@ -4,6 +4,15 @@ export const BEGIN = '@@optimist/BEGIN';
 export const COMMIT = '@@optimist/COMMIT';
 export const REVERT = '@@optimist/REVERT';
 
+export const ensureState = state => {
+  if (Map.isMap(state)) {
+    if (List.isList(state.get('history'))) {
+      return state.get('current');
+    }
+  }
+  return state;
+};
+
 const applyCommit = (state, commitId, reducer) => {
   const history = state.get('history');
   // If the action to commit is the first in the queue (most common scenario)
@@ -94,7 +103,7 @@ export const optimistic = (reducer, rawConfig = {}) => {
       isReady = true;
       state = Map({
         history: List(),
-        current: reducer(state, {}),
+        current: reducer(ensureState(state), {}),
         beforeState: undefined
       });
     }
@@ -133,15 +142,6 @@ export const optimistic = (reducer, rawConfig = {}) => {
         return state.set('current', reducer(state.get('current'), action));
     }
   };
-};
-
-export const ensureState = state => {
-  if (Map.isMap(state)) {
-    if (List.isList(state.get('history'))) {
-      return state.get('current');
-    }
-  }
-  return state;
 };
 
 
