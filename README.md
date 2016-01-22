@@ -1,3 +1,5 @@
+[![npm version](https://badge.fury.io/js/redux-optimistic-ui.svg)](https://badge.fury.io/js/redux-optimistic-ui)
+
 # redux-optimistic-ui
 a reducer enhancer to enable type-agnostic optimistic updates
 
@@ -12,14 +14,14 @@ This makes your app feel super fast, regardless of server location or internet c
 
 ## How's it different from redux-optimist?
 
-| redux-optimist                                                    | redux-optimistic-ui                                    |
-|-------------------------------------------------------------------|--------------------------------------------------------|
-| reducerExtender (adds an optimist to your state)                  | reducerEnhancer (wraps your state in an immutable Map) |
-| must use plain JS objects for your state                          | can use immutable.js or anything else                  |
-| saves an extra copy of your state for every new optimistic action | only uses 1 state copy                                 |
-| uses native JS objects behind the scenes                          | uses immutable.js behind the scenes                    |
-| no change necessary to get your state                             | must wrap your state calls in `ensureState`            |ou're really performance driven, you could ignore certain items from going in the queue (eg toggles, css effects, etc.)
-
+| redux-optimistic-ui                                    | redux-optimist                                                    |
+|--------------------------------------------------------|-------------------------------------------------------------------|
+| reducerEnhancer (wraps your state in an immutable Map) | reducerExtender (adds an optimist to your state)                  |
+| can use immutable.js or anything else                  | must use plain JS objects for your state                          |
+| only uses 1 state copy                                 | saves an extra copy of your state for every new optimistic action |
+| uses immutable.js behind the scenes                    | uses native JS objects behind the scenes                          |
+| FSA compliant                                          | not FSA compliant                                                 |
+| must wrap your state calls in `ensureState`            | no change necessary to get your state                             |
 ##Usage
 
 ###Feed it your reducer
@@ -38,10 +40,11 @@ state = Map({
   current: <YOUR STATE HERE>
 })
 ```
-If the client is waiting for a response from the server, the following are guaranteed to be true:
+If the client is not waiting for a response from the server, the following are guaranteed to be true:
 - `state.get('history').size === 0`
 - `state.get('beforeState') === undefined`
-That's the only time you'll ever need to access those props.
+
+If you don't need to know if there is an outstanding fetch, you'll never need to use these.
 
 ###Update your references to `state`
 
