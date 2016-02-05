@@ -99,7 +99,7 @@ export const optimistic = (reducer, rawConfig = {}) => {
   let isReady = false;
 
   return (state, action) => {
-    if (!isReady) {
+    if (!isReady || state === undefined) {
       isReady = true;
       state = Map({
         history: List(),
