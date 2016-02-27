@@ -123,9 +123,11 @@ export const optimistic = (reducer, rawConfig = {}) => {
             .set('beforeState', state.get('current'))
         });
       case COMMIT:
-        return applyCommit(state, id, reducer);
+        let committedState = applyCommit(state, id, reducer)
+        return committedState.set('current', reducer(committedState.get('current'), action))
       case REVERT:
-        return applyRevert(state, id, reducer);
+        let revertedState = applyRevert(state, id, reducer)
+        return revertedState.set('current', reducer(revertedState.get('current'), action))
       default:
         if (historySize) {
           if (historySize > config.maxHistory) {
@@ -143,5 +145,3 @@ export const optimistic = (reducer, rawConfig = {}) => {
     }
   };
 };
-
-

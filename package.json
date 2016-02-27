@@ -30,8 +30,11 @@
     "immutable": "^3.7.6"
   },
   "devDependencies": {
+    "ava": "^0.12.0",
+    "babel-cli": "^6.5.1",
     "babel-preset-es2015": "^6.3.13",
     "babel-preset-stage-0": "^6.3.13",
-    "babel-register": "^6.3.13"
+    "babel-register": "^6.3.13",
+    "rimraf": "^2.5.2"
   }
 }
