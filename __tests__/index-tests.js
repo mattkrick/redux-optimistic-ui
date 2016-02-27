@@ -137,6 +137,29 @@ test('immediately commit a transaction', t => {
   t.same(actual.toJS(), expected.toJS());
 });
 
+test('immediately commit a transaction with success message', t => {
+  const successReducer = (state, action) => {
+    switch (action.type) {
+      case 'SUCCESS':
+        return 'Success message';
+      default:
+        return state
+    }
+  }
+  const rootReducer = (state = {}, action) => ({counter: counterReducer(state.counter, action), success: successReducer(state.success, action)});
+  const enhancedReducer = optimistic(rootReducer);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const state1 = enhancedReducer(undefined, begin0);
+  const commit0 = makeAction('SUCCESS', COMMIT, 0);
+  const actual = enhancedReducer(state1, commit0);
+  const expected = Map({
+    beforeState: undefined,
+    history: List(),
+    current: {counter: 1, success: 'Success message'}
+  });
+  t.same(actual.toJS(), expected.toJS());
+});
+
 test('begin 2, commit the first', t => {
   const enhancedReducer = optimistic(rootReducer);
   const begin0 = makeAction('INC', BEGIN, 0);
@@ -182,6 +205,29 @@ test('immediately revert a transaction', t => {
     beforeState: undefined,
     history: List(),
     current: {counter: 0}
+  });
+  t.same(actual.toJS(), expected.toJS());
+});
+
+test('immediately revert a transaction with error message', t => {
+  const errorReducer = (state, action) => {
+    switch (action.type) {
+      case 'ERROR':
+        return 'Error message';
+      default:
+        return state
+    }
+  }
+  const rootReducer = (state = {}, action) => ({counter: counterReducer(state.counter, action), error: errorReducer(state.error, action)});
+  const enhancedReducer = optimistic(rootReducer);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const state1 = enhancedReducer(undefined, begin0);
+  const revertAction = makeAction('ERROR', REVERT, 0);
+  const actual = enhancedReducer(state1, revertAction);
+  const expected = Map({
+    beforeState: undefined,
+    history: List(),
+    current: {counter: 0, error: 'Error message'}
   });
   t.same(actual.toJS(), expected.toJS());
 });
