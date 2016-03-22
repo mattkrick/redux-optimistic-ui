@@ -26,14 +26,14 @@ This makes your app feel super fast, regardless of server location or internet c
 
 ###Feed it your reducer
 
-```
+```js
 import {optimistic} from 'redux-optimistic-ui';
 return optimistic(reducer);
 ```
 
 This will transform your state so it looks like this:
 
-```
+```js
 state = Map({
   history: List(),
   beforeState: <YOUR PREVIOUS STATE HERE>
@@ -53,7 +53,7 @@ But that sucks. What if you don't enhance the state until the user hits a certai
 Lucky you! There's a function for that. `ensureState` will give you your state whether it's enhanced or not.
 Just wrap all your references to `state` and `getState` with it & you're all set!
 
-```
+```js
 // Before
 getState().counter
 
@@ -68,7 +68,7 @@ Now comes the fun! Not all of your actions should be optimistic.
 Just the ones that fetch something from a server *and have a high probability of success*.
 I like real-world examples, so this middleware is a little bit longer than the bare requirements:
 
-```
+```js
 import {BEGIN, COMMIT, REVERT} from 'redux-optimistic-ui';
 
 //All my redux action types that are optimistic have the following suffixes, yours may vary
@@ -111,7 +111,7 @@ export default store => next => action => {
 ##Pro tips
 Not using an optimistic-ui until a certain route? Using something like `redux-undo` in other parts? Write a little something like this and call it on your asychronous route:
 
-```
+```js
 export default (newReducers, reducerEnhancers) => {
   Object.assign(currentReducers, newReducers);
   const reducer = combineReducers({...currentReducers})
