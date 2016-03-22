@@ -57,7 +57,6 @@ const applyRevert = (state, revertId, reducer) => {
   const history = state.get('history');
   const beforeState = state.get('beforeState');
   let newHistory;
-  let newBeforeState;
   // If the action to revert is the first in the queue (most common scenario)
   if (history.first().meta.optimistic.id === revertId) {
     const historyWithoutRevert = history.shift();
@@ -72,14 +71,12 @@ const applyRevert = (state, revertId, reducer) => {
       });
     }
     newHistory = historyWithoutRevert.skip(nextOptimisticIndex);
-    newBeforeState = beforeState;
   } else {
     const indexToRevert = history.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id === revertId);
     if (indexToRevert === -1) {
       console.error(`@@optimist: Failed revert. Transaction #${revertId} does not exist!`);
     }
     newHistory = history.delete(indexToRevert);
-    newBeforeState = beforeState;
   }
   const newCurrent = newHistory.reduce((mutState, action) => {
     return reducer(mutState, action)
@@ -88,7 +85,7 @@ const applyRevert = (state, revertId, reducer) => {
     mutState
       .set('history', newHistory)
       .set('current', newCurrent)
-      .set('beforeState', newBeforeState)
+      .set('beforeState', beforeState)
   });
 };
 
@@ -108,40 +105,47 @@ export const optimistic = (reducer, rawConfig = {}) => {
       });
     }
     const historySize = state.get('history').size;
-    const metaAction = (action.meta && action.meta.optimistic) || {};
-    let {type, id} = metaAction;
-    if (type === BEGIN && historySize) {
-      // Don't save a second state
-      type = null;
-    }
-    switch (type) {
-      case BEGIN:
+    const {type, id} = (action.meta && action.meta.optimistic) || {};
+
+    // a historySize means there is at least 1 outstanding fetch
+    if (historySize) {
+      if (type !== COMMIT && type !== REVERT) {
+        if (historySize > config.maxHistory) {
+          console.error(`@@optimist: Possible memory leak detected.
+                  Verify all actions result in a commit or revert and
+                  don't use optimistic-UI for long-running server fetches`);
+        }
+        // if it's a BEGIN but we already have a historySize, treat it like a non-opt
         return state.withMutations(mutState => {
           mutState
             .set('history', state.get('history').push(action))
             .set('current', reducer(state.get('current'), action))
-            .set('beforeState', state.get('current'))
         });
-      case COMMIT:
-        return applyCommit(state, id, reducer);
-      case REVERT:
-        return applyRevert(state, id, reducer);
-      default:
-        if (historySize) {
-          if (historySize > config.maxHistory) {
-            console.error(`@@optimist: Possible memory leak detected.
-              Verify all actions result in a commit or revert and
-              don't use optimistic-UI for long-running server fetches`);
-          }
-          return state.withMutations(mutState => {
-            mutState
-              .set('history', state.get('history').push(action))
-              .set('current', reducer(state.get('current'), action));
-          });
-        }
-        return state.set('current', reducer(state.get('current'), action));
+      }
+      // for resolutions, remove the id so it's not treated like an optimistic action
+      action.meta.optimistic.id = undefined;
+
+      // include the resolution in the history & current state
+      const nextState = state.withMutations(mutState => {
+        mutState
+          .set('history', state.get('history').push(action))
+          .set('current', reducer(state.get('current'), action))
+      });
+
+      const applyFunc = type === COMMIT ? applyCommit : applyRevert;
+      return applyFunc(nextState, id, reducer);
     }
+    // create a beforeState since one doesn't already exist
+    if (type === BEGIN) {
+      return state.withMutations(mutState => {
+        mutState
+          .set('history', state.get('history').push(action))
+          .set('current', reducer(state.get('current'), action))
+          .set('beforeState', state.get('current'))
+      });
+    }
+
+    // standard action escape
+    return state.set('current', reducer(state.get('current'), action));
   };
 };
-
-
