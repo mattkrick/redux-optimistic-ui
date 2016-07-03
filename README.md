@@ -1,4 +1,6 @@
 [![npm version](https://badge.fury.io/js/redux-optimistic-ui.svg)](https://badge.fury.io/js/redux-optimistic-ui)
+[![Build Status](https://travis-ci.org/mattkrick/redux-optimistic-ui.svg?branch=master)](https://travis-ci.org/mattkrick/redux-optimistic-ui)
+[![Coverage Status](https://coveralls.io/repos/github/mattkrick/redux-optimistic-ui/badge.svg?branch=master)](https://coveralls.io/github/mattkrick/redux-optimistic-ui?branch=master)
 
 # redux-optimistic-ui
 a reducer enhancer to enable type-agnostic optimistic updates
