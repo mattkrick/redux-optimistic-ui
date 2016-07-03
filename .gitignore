@@ -2,3 +2,4 @@ lib
 *.log
 node_modules
 .idea
+.nyc_output

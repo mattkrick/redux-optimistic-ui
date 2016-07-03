@@ -227,7 +227,6 @@ test('begin 2, revert the first, then the second', t => {
   const state1 = enhancedReducer(undefined, begin0);
   const state2 = enhancedReducer(state1, begin1);
   const state3 = enhancedReducer(state2, revert0);
-  console.log('STATE3', state3.toJS())
   const actual = enhancedReducer(state3, secondRevert);
   const expected = Map({
     beforeState: undefined,
