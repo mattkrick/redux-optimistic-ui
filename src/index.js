@@ -18,7 +18,7 @@ const applyCommit = (state, commitId, reducer) => {
   // If the action to commit is the first in the queue (most common scenario)
   if (history.first().meta.optimistic.id === commitId) {
     const historyWithoutCommit = history.shift();
-    const nextOptimisticIndex = historyWithoutCommit.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id);
+    const nextOptimisticIndex = historyWithoutCommit.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.type === BEGIN);
     // If this is the only optimistic item in the queue, we're done!
     if (nextOptimisticIndex === -1) {
       return state.withMutations(mutState => {
@@ -60,13 +60,16 @@ const applyRevert = (state, revertId, reducer) => {
   // If the action to revert is the first in the queue (most common scenario)
   if (history.first().meta.optimistic.id === revertId) {
     const historyWithoutRevert = history.shift();
-    const nextOptimisticIndex = historyWithoutRevert.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id);
+    const nextOptimisticIndex = historyWithoutRevert.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.type === BEGIN);
     // If this is the only optimistic action in the queue, we're done!
     if (nextOptimisticIndex === -1) {
       return state.withMutations(mutState => {
         mutState
           .set('history', List())
-          .set('current', historyWithoutRevert.reduce((mutState, action) => reducer(mutState, action), beforeState))
+          .set('current', historyWithoutRevert
+            .filter(action => (action.meta && action.meta.optimistic && action.meta.optimistic.id != revertId) ||
+              (!action.meta || !action.meta.optimistic || !action.meta.optimistic.id))
+            .reduce((mutState, action) => reducer(mutState, action), beforeState))
           .set('beforeState', undefined)
       });
     }
@@ -76,16 +79,22 @@ const applyRevert = (state, revertId, reducer) => {
     if (indexToRevert === -1) {
       console.error(`@@optimist: Failed revert. Transaction #${revertId} does not exist!`);
     }
-    newHistory = history.delete(indexToRevert);
+    newHistory = history.filter(action => (action.meta && action.meta.optimistic && action.meta.optimistic.id != revertId) ||
+      (!action.meta || !action.meta.optimistic || !action.meta.optimistic.id))
   }
   const newCurrent = newHistory.reduce((mutState, action) => {
     return reducer(mutState, action)
   }, beforeState);
+  const firstBegin = newHistory.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.type === BEGIN)
+  const newBeforeState = newHistory.slice(0, firstBegin).reduce((mutState, action) => {
+    return reducer(mutState, action)
+  }, beforeState)
+  newHistory = newHistory.slice(firstBegin)
   return state.withMutations(mutState => {
     mutState
       .set('history', newHistory)
       .set('current', newCurrent)
-      .set('beforeState', beforeState)
+      .set('beforeState', newBeforeState)
   });
 };
 
