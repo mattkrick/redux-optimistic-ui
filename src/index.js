@@ -13,6 +13,19 @@ export const ensureState = state => {
   return state;
 };
 
+export const applyOptimistic = rawConfig => createStore => (reducer, ...args) => {
+  const store = createStore(optimistic(reducer, rawConfig), ...args); 
+  return {
+    ...store,
+    getState() {
+      return ensureState(store.getState());
+    },
+    replaceReducer(nextReducer) {
+      return store.replaceReducer(optimistic(nextReducer, rawConfig));
+    }
+  };
+};
+
 const applyCommit = (state, commitId, reducer) => {
   const history = state.get('history');
   // If the action to commit is the first in the queue (most common scenario)

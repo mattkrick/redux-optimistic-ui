@@ -1,7 +1,8 @@
 import test from 'ava';
 import 'babel-register';
-import {optimistic, BEGIN, COMMIT, REVERT} from '../src/index';
+import {optimistic, applyOptimistic, BEGIN, COMMIT, REVERT} from '../src/index';
 import {Map, List, is} from 'immutable';
+import {createStore} from 'redux'
 
 const counterReducer = (state = 0, action) => {
   switch (action.type) {
@@ -336,4 +337,26 @@ test('real world', t => {
     current: {counter: -2}
   });
   t.same(actual.toJS(), expected.toJS());
+});
+
+test('store enhancement', t => {
+  const store = createStore(rootReducer, applyOptimistic())
+  store.dispatch(makeAction('INC', BEGIN, 0));
+  t.same(store.getState(), {counter: 1});
+  store.dispatch(makeAction('INC', BEGIN, 1));
+  t.same(store.getState(), {counter: 2});
+  store.dispatch({type: 'DEC'});
+  t.same(store.getState(), {counter: 1});
+  store.dispatch(makeAction('--', REVERT, 0));
+  t.same(store.getState(), {counter: 0});
+  store.dispatch({type: 'DEC'});
+  t.same(store.getState(), {counter: -1});
+  store.dispatch(makeAction('DEC', BEGIN, 2));
+  t.same(store.getState(), {counter: -2});
+  store.dispatch(makeAction('--', COMMIT, 1));
+  t.same(store.getState(), {counter: -2});
+  store.dispatch({type: 'DEC'});
+  t.same(store.getState(), {counter: -3});
+  store.dispatch(makeAction('--', REVERT, 2));
+  t.same(store.getState(), {counter: -2});
 });

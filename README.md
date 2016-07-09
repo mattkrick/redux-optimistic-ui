@@ -3,14 +3,13 @@
 [![Coverage Status](https://coveralls.io/repos/github/mattkrick/redux-optimistic-ui/badge.svg?branch=master)](https://coveralls.io/github/mattkrick/redux-optimistic-ui?branch=master)
 
 # redux-optimistic-ui
-a reducer enhancer to enable type-agnostic optimistic updates
+a store enhancer to enable type-agnostic optimistic updates
 
 ##Installation
 `npm i -S redux-optimistic-ui`
 
 ## A what-now?
-A reducer enhance is a function you put around a reducer. 
-It can be your rootReducer (the output from a `combineReducers`) or a nested one.
+A store enhancer is a function you put around `createStore`, just like `applyMiddleware`.
 Optimistic-UI means you update what the client sees before the result comes back from the server.
 This makes your app feel super fast, regardless of server location or internet connection speed.
 
@@ -23,10 +22,39 @@ This makes your app feel super fast, regardless of server location or internet c
 | only uses 1 state copy                                 | saves an extra copy of your state for every new optimistic action |
 | uses immutable.js behind the scenes                    | uses native JS objects behind the scenes                          |
 | FSA compliant                                          | not FSA compliant                                                 |
-| must wrap your state calls in `ensureState`            | no change necessary to get your state                             |
+| must enhance your store with `applyOptimistic`         | no change necessary to get your state                             |
+|   or enhance your reducer                              |                                                                   |
+
 ##Usage
 
-###Feed it your reducer
+###Enhance your store
+
+```js
+import {createStore, compose} from 'redux';
+import {applyOptimistic} from 'redux-optimistic-ui';
+
+const store = createStore(
+  reducer,
+  compose(
+    applyMiddleware(...),
+    applyOptimistic()
+  )
+);
+```
+
+This will internally wrap your state so it looks like this:
+
+```js
+state = Map({
+  history: List(),
+  beforeState: <YOUR PREVIOUS STATE HERE>
+  current: <YOUR STATE HERE>
+})
+```
+
+However, your reducers and `connect`ed components will only see your state, not this wrapper.
+
+###Or feed it your reducer
 
 ```js
 import {optimistic} from 'redux-optimistic-ui';
@@ -42,27 +70,12 @@ state = Map({
   current: <YOUR STATE HERE>
 })
 ```
+
 If the client is not waiting for a response from the server, the following are guaranteed to be true:
 - `state.get('history').size === 0`
 - `state.get('beforeState') === undefined`
 
 If you don't need to know if there is an outstanding fetch, you'll never need to use these.
-
-###Update your references to `state`
-
-Since your state is now wrapped, you need `state.get('current')`. 
-But that sucks. What if you don't enhance the state until the user hits a certain route?
-Lucky you! There's a function for that. `ensureState` will give you your state whether it's enhanced or not.
-Just wrap all your references to `state` and `getState` with it & you're all set!
-
-```js
-// Before
-getState().counter
-
-// After (whether you've enhanced your reducer or not)
-import {ensureState} from 'redux-optimistic-ui'
-ensureState(getState()).counter
-```
 
 ###Write some middleware
 
