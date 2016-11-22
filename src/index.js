@@ -13,6 +13,12 @@ export const ensureState = state => {
   return state;
 };
 
+export const preloadState = state => Map({
+  beforeState: undefined,
+  history: List(),
+  current: state
+});
+
 const applyCommit = (state, commitId, reducer) => {
   const history = state.get('history');
   // If the action to commit is the first in the queue (most common scenario)
@@ -97,12 +103,8 @@ export const optimistic = (reducer, rawConfig = {}) => {
 
   return (state, action) => {
     if (!isReady || state === undefined) {
-      isReady = true;
-      state = Map({
-        history: List(),
-        current: reducer(ensureState(state), {}),
-        beforeState: undefined
-      });
+      isReady = true
+      state = preloadState(reducer(ensureState(state), {}));
     }
     const historySize = state.get('history').size;
     const {type, id} = (action.meta && action.meta.optimistic) || {};
