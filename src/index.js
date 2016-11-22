@@ -89,19 +89,25 @@ const applyRevert = (state, revertId, reducer) => {
   });
 };
 
+const isInitialized  = (state, readyValue) => (
+  state !== undefined &&
+  typeof state.get === 'function' &&
+  state.get('isReady') === readyValue
+);
+
 export const optimistic = (reducer, rawConfig = {}) => {
   const config = Object.assign({
     maxHistory: 100
   }, rawConfig);
-  let isReady = false;
+  const readyValue = Math.random()
 
   return (state, action) => {
-    if (!isReady || state === undefined) {
-      isReady = true;
+    if (!isInitialized(state, readyValue)) {
       state = Map({
         history: List(),
         current: reducer(ensureState(state), {}),
-        beforeState: undefined
+        beforeState: undefined,
+        isReady: readyValue
       });
     }
     const historySize = state.get('history').size;
