@@ -107,11 +107,11 @@ export const optimistic = (reducer, rawConfig = {}) => {
       state = preloadState(reducer(ensureState(state), {}));
     }
     const historySize = state.get('history').size;
-    
+
     if (action.meta && action.meta.optimistic) {
       action.meta.optimistic._id = action.meta.optimistic._id || action.meta.optimistic.id;
     }
-    
+
     const {type, _id: id} = (action.meta && action.meta.optimistic) || {};
 
     // a historySize means there is at least 1 outstanding fetch
