@@ -151,3 +151,10 @@ export const optimistic = (reducer, rawConfig = {}) => {
     return state.set('current', reducer(state.get('current'), action));
   };
 };
+
+export const storeEnhancer = (createStore) => (reducer, preloadedState, enhancer) =>
+    store = createStore(optimistic(reducer), preloadedState, enhancer);
+    _getState = store.getState;
+    store.getState = => ensureState(_getState());
+    return store;
+
