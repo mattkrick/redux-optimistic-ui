@@ -24,7 +24,7 @@ const applyCommit = (state, commitId, reducer) => {
   // If the action to commit is the first in the queue (most common scenario)
   if (history.first().meta.optimistic.id === commitId) {
     const historyWithoutCommit = history.shift();
-    const nextOptimisticIndex = historyWithoutCommit.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id);
+    const nextOptimisticIndex = historyWithoutCommit.findIndex(action => action.meta && action.meta.optimistic && !action.meta.optimistic.isNotOptimistic && action.meta.optimistic.id);
     // If this is the only optimistic item in the queue, we're done!
     if (nextOptimisticIndex === -1) {
       return state.withMutations(mutState => {
@@ -66,7 +66,7 @@ const applyRevert = (state, revertId, reducer) => {
   // If the action to revert is the first in the queue (most common scenario)
   if (history.first().meta.optimistic.id === revertId) {
     const historyWithoutRevert = history.shift();
-    const nextOptimisticIndex = historyWithoutRevert.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id);
+    const nextOptimisticIndex = historyWithoutRevert.findIndex(action => action.meta && action.meta.optimistic && !action.meta.optimistic.isNotOptimistic && action.meta.optimistic.id);
     // If this is the only optimistic action in the queue, we're done!
     if (nextOptimisticIndex === -1) {
       return state.withMutations(mutState => {
@@ -124,8 +124,8 @@ export const optimistic = (reducer, rawConfig = {}) => {
             .set('current', reducer(state.get('current'), action))
         });
       }
-      // for resolutions, remove the id so it's not treated like an optimistic action
-      action.meta.optimistic.id = undefined;
+      // for resolutions, add a flag so that we know it is not an optimistic action
+      action.meta.optimistic.isNotOptimistic = true;
 
       // include the resolution in the history & current state
       const nextState = state.withMutations(mutState => {

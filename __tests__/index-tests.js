@@ -23,6 +23,10 @@ const counterReducer = (state = 0, action) => {
 };
 const rootReducer = (state = {}, action) => ({counter: counterReducer(state.counter, action)});
 const rootReducerImmutable = (state = Map(), action) => Map({counter: counterReducer(state.get('counter'), action)});
+const enhancedRootReducerNested = combineReducers({
+  counter1: combineReducers({ counter: optimistic(counterReducer) }),
+  counter2: combineReducers({ counter: optimistic(counterReducer) })
+})
 const makeAction = (type, metaType, id) => ({type, meta: {optimistic: {type: metaType, id}}});
 
 /*Meta tests*/
@@ -37,6 +41,17 @@ test('test rootReducerImmutable works OK', t => {
   const expected = Map({counter: 0});
   t.true(is(actual, expected))
 });
+
+test('test enhancedRootReducerNested works OK', t => {
+  const actual = enhancedRootReducerNested(undefined, {});
+  const expected = Map({
+      beforeState: undefined,
+      history: List(),
+      current: 0
+  })
+  t.deepEqual(actual.counter1.counter.toJS(), expected.toJS())
+  t.deepEqual(actual.counter2.counter.toJS(), expected.toJS())
+})
 
 /*BASIC*/
 test('wraps a reducer', t => {
@@ -258,6 +273,20 @@ test('begin 1, add non-opt, revert it', t => {
     current: {counter: -1}
   });
   t.deepEqual(actual.toJS(), expected.toJS());
+});
+
+test('begin 1 with nested combineReducers, revert', t => {
+  const begin = makeAction('INC', BEGIN, 0);
+  const revert = makeAction('--', REVERT, 0);
+  const state = enhancedRootReducerNested(undefined, begin);
+  const actual = enhancedRootReducerNested(state, revert);
+  const expected = Map({
+    beforeState: undefined,
+    history: List(),
+    current: 0
+  });
+  t.deepEqual(actual.counter1.counter.toJS(), expected.toJS());
+  t.deepEqual(actual.counter2.counter.toJS(), expected.toJS());
 });
 
 test('begin 2, add non-opt, revert first', t => {
