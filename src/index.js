@@ -102,7 +102,7 @@ export const optimistic = (reducer, rawConfig = {}) => {
   let isReady = false;
 
   return (state, action) => {
-    if (!isReady || state === undefined) {
+    if (!isReady || state === undefined || action.type === '@@redux/INIT') {
       isReady = true
       state = preloadState(reducer(ensureState(state), {}));
     }
