@@ -99,11 +99,9 @@ export const optimistic = (reducer, rawConfig = {}) => {
   const config = Object.assign({
     maxHistory: 100
   }, rawConfig);
-  let isReady = false;
 
   return (state, action) => {
-    if (!isReady || state === undefined || action.type === '@@redux/INIT') {
-      isReady = true
+    if (state === undefined || action.type === '@@redux/INIT') {
       state = preloadState(reducer(ensureState(state), {}));
     }
     const historySize = state.get('history').size;

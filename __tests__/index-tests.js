@@ -375,22 +375,22 @@ test('real world', t => {
   t.deepEqual(actual.toJS(), expected.toJS());
 });
 
-test('with redux and preloadState', t => {
+test('with redux and initialState with preloadState', t => {
   const enhancedReducer = combineReducers({
     counter: optimistic(counterReducer)
   });
   try {
     const store = createStore(enhancedReducer, {
-      counter: preloadState(0)
+      counter: preloadState(1)
     });
     store.dispatch({type: 'INC'});
-    t.is(ensureState(store.getState().counter), 1);
+    t.is(ensureState(store.getState().counter), 2);
   } catch (error) {
     t.fail(error.message)
   }
 });
 
-test('with redux and intiialState without preloadState', t => {
+test('with redux and initialState without preloadState', t => {
   const enhancedReducer = combineReducers({
     counter: optimistic(counterReducer)
   });
