@@ -24,9 +24,10 @@ This makes your app feel super fast, regardless of server location or internet c
 | uses immutable.js behind the scenes                    | uses native JS objects behind the scenes                          |
 | FSA compliant                                          | not FSA compliant                                                 |
 | must wrap your state calls in `ensureState`            | no change necessary to get your state                             |
-##Usage
 
-###Feed it your reducer
+## Usage
+
+### Feed it your reducer
 
 ```js
 import {optimistic} from 'redux-optimistic-ui';
@@ -48,7 +49,7 @@ If the client is not waiting for a response from the server, the following are g
 
 If you don't need to know if there is an outstanding fetch, you'll never need to use these.
 
-###Update your references to `state`
+### Update your references to `state`
 
 Since your state is now wrapped, you need `state.get('current')`. 
 But that sucks. What if you don't enhance the state until the user hits a certain route?
@@ -64,7 +65,7 @@ import {ensureState} from 'redux-optimistic-ui'
 ensureState(getState()).counter
 ```
 
-###Write some middleware
+### Write some middleware
 
 Now comes the fun! Not all of your actions should be optimistic. 
 Just the ones that fetch something from a server *and have a high probability of success*.
@@ -110,7 +111,7 @@ export default store => next => action => {
 };
 ```
 
-##Pro tips
+## Pro tips
 Not using an optimistic-ui until a certain route? Using something like `redux-undo` in other parts? Write a little something like this and call it on your asychronous route:
 
 ```js
