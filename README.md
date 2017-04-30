@@ -5,7 +5,7 @@
 # redux-optimistic-ui
 a reducer enhancer to enable type-agnostic optimistic updates
 
-##Installation
+## Installation
 `npm i -S redux-optimistic-ui`
 
 ## A what-now?
@@ -24,9 +24,31 @@ This makes your app feel super fast, regardless of server location or internet c
 | uses immutable.js behind the scenes                    | uses native JS objects behind the scenes                          |
 | FSA compliant                                          | not FSA compliant                                                 |
 | must wrap your state calls in `ensureState`            | no change necessary to get your state                             |
-##Usage
 
-###Feed it your reducer
+## How do optimistic actions work?
+
+- When you dispatch a `BEGIN` action
+  - Your current state is recorded as the `beforeState`.
+  - The action is dispatched normally.
+  - All future actions are dispatched normally and additionally stored in the `history`.
+- When you dispatch a `COMMIT` action
+  - The action is dispatched normally.
+  - The `history` is cleared to save memory and future actions are no longer stored (unless there is another uncommitted `BEGIN`).
+- When you dispatch a `REVERT` action
+  - The state is reverted to the `beforeState`.
+  - The initial `BEGIN` action is skipped but all other actions in the `history` are re-dispatched immediately.
+  - The `REVERT` action is dispatched normally.
+  - The `history` is cleared to save memory and future actions are no longer stored (unless there is another uncommitted `BEGIN`).
+  - This effectively makes your state appear as though the intial `BEGIN` action was never dispatched in the first place (leaving a "dangling" `REVERT` action).
+  
+To take advantage of this:
+- Your `BEGIN` action should update your state with the expected outcome of the optimistic action and can optionally indicate that the change is "pending" (e.g. not fully loaded).
+- Your `COMMIT` action should clear the "pending" flag, if you used it.
+- Your `REVERT` action doesn't need to modify the state except to display an error message to the user.
+
+## Usage
+
+### Feed it your reducer
 
 ```js
 import {optimistic} from 'redux-optimistic-ui';
@@ -48,7 +70,7 @@ If the client is not waiting for a response from the server, the following are g
 
 If you don't need to know if there is an outstanding fetch, you'll never need to use these.
 
-###Update your references to `state`
+### Update your references to `state`
 
 Since your state is now wrapped, you need `state.get('current')`. 
 But that sucks. What if you don't enhance the state until the user hits a certain route?
@@ -64,7 +86,7 @@ import {ensureState} from 'redux-optimistic-ui'
 ensureState(getState()).counter
 ```
 
-###Write some middleware
+### Write some middleware
 
 Now comes the fun! Not all of your actions should be optimistic. 
 Just the ones that fetch something from a server *and have a high probability of success*.
@@ -110,7 +132,7 @@ export default store => next => action => {
 };
 ```
 
-##Pro tips
+## Pro tips
 Not using an optimistic-ui until a certain route? Using something like `redux-undo` in other parts? Write a little something like this and call it on your asychronous route:
 
 ```js
