@@ -1,4 +1,4 @@
-import { findIndex } from './array-utils';
+import { find, findIndex } from './array-utils';
 
 export const BEGIN = '@@optimist/BEGIN';
 export const COMMIT = '@@optimist/COMMIT';
@@ -47,7 +47,7 @@ const applyCommit = (state, commitId, reducer) => {
     };
   } else {
     // If the committed action isn't the first in the queue, find out where it is
-    const actionToCommit = history.find(action => action.meta && action.meta.optimistic && action.meta.optimistic.id === commitId);
+    const actionToCommit = find(history, action => action.meta && action.meta.optimistic && action.meta.optimistic.id === commitId);
     if (!actionToCommit) {
       console.error(`@@optimist: Failed commit. Transaction #${commitId} does not exist!`);
     }
