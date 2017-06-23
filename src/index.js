@@ -17,12 +17,6 @@ const createState = state => ({
   current: state
 });
 
-const shift = arr => {
-    const newArr = arr.slice();
-    newArr.shift();
-    return newArr;
-}
-
 const findIndex = (arr, fn) => {
   const l = arr.length;
   for (let i = 0; i < l; i++) {
@@ -37,7 +31,7 @@ const applyCommit = (state, commitId, reducer) => {
   const { history } = state;
   // If the action to commit is the first in the queue (most common scenario)
   if (history[0].meta.optimistic.id === commitId) {
-    const historyWithoutCommit = shift(history);
+    const historyWithoutCommit = history.slice(1);
     const nextOptimisticIndex = findIndex(historyWithoutCommit, action => action.meta && action.meta.optimistic && !action.meta.optimistic.isNotOptimistic && action.meta.optimistic.id);
     // If this is the only optimistic item in the queue, we're done!
     if (nextOptimisticIndex === -1) {
@@ -82,7 +76,7 @@ const applyRevert = (state, revertId, reducer) => {
   let newHistory;
   // If the action to revert is the first in the queue (most common scenario)
   if (history[0].meta.optimistic.id === revertId) {
-    const historyWithoutRevert = shift(history);
+    const historyWithoutRevert = history.slice(1);
     const nextOptimisticIndex = findIndex(historyWithoutRevert, action => action.meta && action.meta.optimistic && !action.meta.optimistic.isNotOptimistic && action.meta.optimistic.id);
     // If this is the only optimistic action in the queue, we're done!
     if (nextOptimisticIndex === -1) {
