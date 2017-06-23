@@ -5,11 +5,12 @@ import {
   BEGIN,
   COMMIT,
   REVERT,
-  ensureState,
-  preloadState
+  ensureState
 } from '../src/index';
 import {Map, List, is} from 'immutable';
 import {createStore, combineReducers} from 'redux';
+
+const INIT_ACTION = { type: '@@redux/INIT' };
 
 const counterReducer = (state = 0, action) => {
   switch (action.type) {
@@ -31,19 +32,19 @@ const makeAction = (type, metaType, id) => ({type, meta: {optimistic: {type: met
 
 /*Meta tests*/
 test('test rootReducer works OK', t => {
-  const actual = rootReducer(undefined, {});
+  const actual = rootReducer(undefined, INIT_ACTION);
   const expected = {counter: 0};
   t.deepEqual(actual, expected)
 });
 
 test('test rootReducerImmutable works OK', t => {
-  const actual = rootReducerImmutable(undefined, {});
+  const actual = rootReducerImmutable(undefined, INIT_ACTION);
   const expected = Map({counter: 0});
   t.true(is(actual, expected))
 });
 
 test('test enhancedRootReducerNested works OK', t => {
-  const actual = enhancedRootReducerNested(undefined, {});
+  const actual = enhancedRootReducerNested(undefined, INIT_ACTION);
   const expected = Map({
       beforeState: undefined,
       history: List(),
@@ -56,7 +57,7 @@ test('test enhancedRootReducerNested works OK', t => {
 /*BASIC*/
 test('wraps a reducer', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const actual = enhancedReducer(undefined, {});
+  const actual = enhancedReducer(undefined, INIT_ACTION);
   const expected = Map({
     beforeState: undefined,
     history: List(),
@@ -67,7 +68,7 @@ test('wraps a reducer', t => {
 
 test('wraps a reducer with existing state', t => {
   const enhancedReducer = optimistic(rootReducer);
-  const actual = enhancedReducer({counter: 5}, {});
+  const actual = enhancedReducer({counter: 5}, INIT_ACTION);
   const expected = Map({
     beforeState: undefined,
     history: List(),
@@ -78,7 +79,7 @@ test('wraps a reducer with existing state', t => {
 
 test('wraps an immutable reducer', t => {
   const enhancedReducer = optimistic(rootReducerImmutable);
-  const actual = enhancedReducer(undefined, {});
+  const actual = enhancedReducer(undefined, INIT_ACTION);
   const expected = Map({
     beforeState: undefined,
     history: List(),
@@ -373,21 +374,6 @@ test('real world', t => {
     current: {counter: -2}
   });
   t.deepEqual(actual.toJS(), expected.toJS());
-});
-
-test('with redux and initialState with preloadState', t => {
-  const enhancedReducer = combineReducers({
-    counter: optimistic(counterReducer)
-  });
-  try {
-    const store = createStore(enhancedReducer, {
-      counter: preloadState(1)
-    });
-    store.dispatch({type: 'INC'});
-    t.is(ensureState(store.getState().counter), 2);
-  } catch (error) {
-    t.fail(error.message)
-  }
 });
 
 test('with redux and initialState without preloadState', t => {
