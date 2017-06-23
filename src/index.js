@@ -1,3 +1,5 @@
+import { findIndex } from './array-utils';
+
 export const BEGIN = '@@optimist/BEGIN';
 export const COMMIT = '@@optimist/COMMIT';
 export const REVERT = '@@optimist/REVERT';
@@ -16,16 +18,6 @@ const createState = state => ({
   history: [],
   current: state
 });
-
-const findIndex = (arr, fn) => {
-  const l = arr.length;
-  for (let i = 0; i < l; i++) {
-    if (fn(arr[i])) {
-      return i;
-    }
-  }
-  return -1;
-}
 
 const applyCommit = (state, commitId, reducer) => {
   const { history } = state;
