@@ -13,7 +13,7 @@ export const ensureState = state => {
   return state;
 };
 
-export const preloadState = state => Map({
+const createState = state => Map({
   beforeState: undefined,
   history: List(),
   current: state
@@ -99,12 +99,10 @@ export const optimistic = (reducer, rawConfig = {}) => {
   const config = Object.assign({
     maxHistory: 100
   }, rawConfig);
-  let isReady = false;
 
   return (state, action) => {
-    if (!isReady || state === undefined) {
-      isReady = true
-      state = preloadState(reducer(ensureState(state), {}));
+    if (state === undefined || action.type === '@@redux/INIT') {
+      state = createState(reducer(ensureState(state), {}));
     }
     const historySize = state.get('history').size;
     const {type, id} = (action.meta && action.meta.optimistic) || {};
