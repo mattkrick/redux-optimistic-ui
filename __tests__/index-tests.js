@@ -9,6 +9,10 @@ import {
 } from '../src/index';
 import {createStore, combineReducers} from 'redux';
 
+// while there isn't an Immutable dependency in the library anymore we want to verify backwards
+// compat with immutable wrapped reducers
+import { List, Map, is } from 'immutable';
+
 const INIT_ACTION = { type: '@@redux/INIT' };
 
 const counterReducer = (state = 0, action) => {
@@ -22,6 +26,8 @@ const counterReducer = (state = 0, action) => {
   }
 };
 const rootReducer = (state = {}, action) => ({counter: counterReducer(state.counter, action)});
+const rootReducerImmutable = (state = Map(), action) => Map({counter: counterReducer(state.get('counter'), action)});
+
 const enhancedRootReducerNested = combineReducers({
   counter1: combineReducers({ counter: optimistic(counterReducer) }),
   counter2: combineReducers({ counter: optimistic(counterReducer) })
@@ -70,6 +76,17 @@ test('wraps a reducer with existing state', t => {
     beforeState: undefined,
     history: [],
     current: {counter: 5}
+  };
+  t.deepEqual(actual, expected);
+});
+
+test('wraps an immutable reducer', t => {
+  const enhancedReducer = optimistic(rootReducerImmutable);
+  const actual = enhancedReducer(undefined, {});
+  const expected = {
+    beforeState: undefined,
+    history: [],
+    current: Map({counter: 0})
   };
   t.deepEqual(actual, expected);
 });

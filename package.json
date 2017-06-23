@@ -35,6 +35,7 @@
     "babel-preset-stage-0": "^6.5.0",
     "babel-register": "^6.9.0",
     "coveralls": "^2.11.9",
+    "immutable": "^3.8.1",
     "nyc": "^6.6.1",
     "redux": "^3.6.0",
     "rimraf": "^2.5.3"
