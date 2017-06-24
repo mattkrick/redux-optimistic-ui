@@ -198,6 +198,26 @@ test('begin 2, add non-opt action, commit the first', t => {
   t.deepEqual(actual, expected);
 });
 
+test('begin 2, commit the second', t => {
+  const enhancedReducer = optimistic(rootReducer);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const begin1 = makeAction('DEC', BEGIN, 1);
+  const commit0 = makeAction('--', COMMIT, 1);
+
+  // optimistic DEC will be converted to a non-opt action in history
+  const converted0 = {type: 'DEC', meta: { optimistic: null } };
+
+  const state1 = enhancedReducer(undefined, begin0);
+  const state2 = enhancedReducer(state1, begin1);
+  const actual = enhancedReducer(state2, commit0);
+  const expected = {
+    beforeState: actual.current,
+    history: [begin0, converted0, commit0],
+    current: {counter: 0}
+  };
+  t.deepEqual(actual, expected);
+});
+
 /*REVERT*/
 test('immediately revert a transaction', t => {
   const enhancedReducer = optimistic(rootReducer);

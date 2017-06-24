@@ -47,18 +47,21 @@ const applyCommit = (state, commitId, reducer) => {
     };
   } else {
     // If the committed action isn't the first in the queue, find out where it is
-    const actionToCommit = find(history, action => action.meta && action.meta.optimistic && action.meta.optimistic.id === commitId);
-    if (!actionToCommit) {
+    const actionToCommitIndex = findIndex(history, action => action.meta && action.meta.optimistic && action.meta.optimistic.id === commitId);
+    if (!actionToCommitIndex) {
       console.error(`@@optimist: Failed commit. Transaction #${commitId} does not exist!`);
     }
+    const actionToCommit = history[actionToCommitIndex];
     // Make it a regular non-optimistic action
-    const newAction = Object.assign({}, actionToCommit[1], {
-      meta: Object.assign({}, actionToCommit[1].meta,
+    const newAction = Object.assign({}, actionToCommit, {
+      meta: Object.assign({}, actionToCommit.meta,
         {optimistic: null})
     });
+    const newHistory = state.history.slice();
+    newHistory.splice(actionToCommitIndex, 1, newAction);
     return {
       ...state,
-      history: [newAction].concat(state.history.slice(1))
+      history: newHistory,
     };
   }
 };
