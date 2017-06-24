@@ -9,7 +9,7 @@ a reducer enhancer to enable type-agnostic optimistic updates
 `npm i -S redux-optimistic-ui`
 
 ## A what-now?
-A reducer enhance is a function you put around a reducer. 
+A reducer enhance is a function you put around a reducer.
 It can be your rootReducer (the output from a `combineReducers`) or a nested one.
 Optimistic-UI means you update what the client sees before the result comes back from the server.
 This makes your app feel super fast, regardless of server location or internet connection speed.
@@ -18,10 +18,9 @@ This makes your app feel super fast, regardless of server location or internet c
 
 | redux-optimistic-ui                                    | redux-optimist                                                    |
 |--------------------------------------------------------|-------------------------------------------------------------------|
-| reducerEnhancer (wraps your state in an immutable Map) | reducerExtender (adds an optimist to your state)                  |
+| reducerEnhancer (wraps your state)                     | reducerExtender (adds an optimist to your state)                  |
 | can use immutable.js or anything else                  | must use plain JS objects for your state                          |
 | only uses 1 state copy                                 | saves an extra copy of your state for every new optimistic action |
-| uses immutable.js behind the scenes                    | uses native JS objects behind the scenes                          |
 | FSA compliant                                          | not FSA compliant                                                 |
 | must wrap your state calls in `ensureState`            | no change necessary to get your state                             |
 
@@ -37,21 +36,21 @@ return optimistic(reducer);
 This will transform your state so it looks like this:
 
 ```js
-state = Map({
-  history: List(),
+state = {
+  history: [],
   beforeState: <YOUR PREVIOUS STATE HERE>
   current: <YOUR STATE HERE>
-})
+}
 ```
 If the client is not waiting for a response from the server, the following are guaranteed to be true:
-- `state.get('history').size === 0`
-- `state.get('beforeState') === undefined`
+- `state.history.length === 0`
+- `state.beforeState === undefined`
 
 If you don't need to know if there is an outstanding fetch, you'll never need to use these.
 
-###Update your references to `state`
+### Update your references to `state`
 
-Since your state is now wrapped, you need `state.get('current')`. 
+Since your state is now wrapped, you need `state.current`.
 But that sucks. What if you don't enhance the state until the user hits a certain route?
 Lucky you! There's a function for that. `ensureState` will give you your state whether it's enhanced or not.
 Just wrap all your references to `state` and `getState` with it & you're all set!
@@ -67,7 +66,7 @@ ensureState(getState()).counter
 
 ### Write some middleware
 
-Now comes the fun! Not all of your actions should be optimistic. 
+Now comes the fun! Not all of your actions should be optimistic.
 Just the ones that fetch something from a server *and have a high probability of success*.
 I like real-world examples, so this middleware is a little bit longer than the bare requirements:
 
@@ -78,14 +77,14 @@ import {BEGIN, COMMIT, REVERT} from 'redux-optimistic-ui';
 const _SUCCESS = '_SUCCESS';
 const _ERROR = '_ERROR';
 
-//Each optimistic item will need a transaction Id to internally match the BEGIN to the COMMIT/REVERT 
+//Each optimistic item will need a transaction Id to internally match the BEGIN to the COMMIT/REVERT
 let nextTransactionID = 0;
 
 // That crazy redux middleware that's 3 functions deep!
 export default store => next => action => {
   // FSA compliant
   const {type, meta, payload} = action;
-  
+
   // For actions that have a high probability of failing, I don't set the flag
   if (!meta || !meta.isOptimistic) return next(action);
 
@@ -95,9 +94,9 @@ export default store => next => action => {
   // Extend the action.meta to let it know we're beginning an optimistic update
   next(Object.assign({}, action, {meta: {optimistic: {type: BEGIN, id: transactionID}}}));
 
-  // HTTP is boring, I like sending data over sockets, the 3rd arg is a callback 
+  // HTTP is boring, I like sending data over sockets, the 3rd arg is a callback
   socket.emit(type, payload, error => {
-    // Create a redux action based on the result of the callback 
+    // Create a redux action based on the result of the callback
     next({
       type: type + (error ? _ERROR : _SUCCESS),
       error,
