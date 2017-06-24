@@ -47,9 +47,6 @@ const applyCommit = (state, commitId, reducer) => {
   } else {
     // If the committed action isn't the first in the queue, find out where it is
     const actionToCommit = history.findEntry(action => action.meta && action.meta.optimistic && action.meta.optimistic.id === commitId);
-    if (!actionToCommit) {
-      console.error(`@@optimist: Failed commit. Transaction #${commitId} does not exist!`);
-    }
     // Make it a regular non-optimistic action
     const newAction = Object.assign({}, actionToCommit[1], {
       meta: Object.assign({}, actionToCommit[1].meta,
@@ -79,9 +76,6 @@ const applyRevert = (state, revertId, reducer) => {
     newHistory = historyWithoutRevert.skip(nextOptimisticIndex);
   } else {
     const indexToRevert = history.findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id === revertId);
-    if (indexToRevert === -1) {
-      console.error(`@@optimist: Failed revert. Transaction #${revertId} does not exist!`);
-    }
     newHistory = history.delete(indexToRevert);
   }
   const newCurrent = newHistory.reduce((mutState, action) => {
@@ -122,6 +116,12 @@ export const optimistic = (reducer, rawConfig = {}) => {
             .set('current', reducer(state.get('current'), action))
         });
       }
+
+      const targetActionIndex = state.get('history').findIndex(action => action.meta && action.meta.optimistic && action.meta.optimistic.id === id);
+      if (targetActionIndex === -1) {
+        throw new Error(`@@optimist: Failed to ${type === COMMIT ? 'commit' : 'revert'}. Transaction #${id} does not exist!`);
+      }
+
       // for resolutions, add a flag so that we know it is not an optimistic action
       action.meta.optimistic.isNotOptimistic = true;
 

@@ -195,6 +195,36 @@ test('begin 2, add non-opt action, commit the first', t => {
   t.deepEqual(actual.toJS(), expected.toJS());
 });
 
+test('begin 2, commit the second', t => {
+  const enhancedReducer = optimistic(rootReducer);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const begin1 = makeAction('DEC', BEGIN, 1);
+  const commit0 = makeAction('--', COMMIT, 1);
+
+  // optimistic DEC will be converted to a non-opt action in history
+  const converted0 = {type: 'DEC', meta: { optimistic: null } };
+
+  const state1 = enhancedReducer(undefined, begin0);
+  const state2 = enhancedReducer(state1, begin1);
+  const actual = enhancedReducer(state2, commit0);
+  const expected = Map({
+    beforeState: actual.get('current'),
+    history: List.of(begin0, converted0, commit0),
+    current: {counter: 0}
+  });
+  t.deepEqual(actual.toJS(), expected.toJS());
+});
+
+test('attempt to commit non-existent transaction id', t => {
+  const enhancedReducer = optimistic(rootReducer);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const commit0 = makeAction('--', COMMIT, 1);
+
+  const state1 = enhancedReducer(undefined, begin0);
+  const error = t.throws(() => enhancedReducer(state1, commit0), Error);
+  t.true(error.message.indexOf('Transaction #1 does not exist') !== -1);
+});
+
 /*REVERT*/
 test('immediately revert a transaction', t => {
   const enhancedReducer = optimistic(rootReducer);
@@ -346,6 +376,17 @@ test('revert and commit have an extra DEC', t => {
     current: {counter: -2}
   });
   t.deepEqual(actual.toJS(), expected.toJS());
+});
+
+test('attempt to revert non-existent transaction id', t => {
+  const enhancedReducer = optimistic(rootReducer);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const revert0 = makeAction('--', REVERT, 1);
+
+  const state1 = enhancedReducer(undefined, begin0);
+  const error = t.throws(() => enhancedReducer(state1, revert0), Error);
+
+  t.true(error.message.indexOf('Transaction #1 does not exist') !== -1);
 });
 
 test('real world', t => {
