@@ -1,4 +1,4 @@
-import { find, findIndex } from './array-utils';
+import { findIndex } from './array-utils';
 
 export const BEGIN = '@@optimist/BEGIN';
 export const COMMIT = '@@optimist/COMMIT';

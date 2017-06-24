@@ -7,8 +7,3 @@ export function findIndex(arr, predicate) {
   }
   return -1;
 }
-
-export function find(arr, predicate) {
-    const index = findIndex(arr, predicate);
-    return index === -1 ? undefined : arr[index];
-}
