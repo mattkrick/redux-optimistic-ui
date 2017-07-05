@@ -49,7 +49,7 @@ If the client is not waiting for a response from the server, the following are g
 
 If you don't need to know if there is an outstanding fetch, you'll never need to use these.
 
-###Update your references to `state`
+### Update your references to `state`
 
 Since your state is now wrapped, you need `state.get('current')`. 
 But that sucks. What if you don't enhance the state until the user hits a certain route?
