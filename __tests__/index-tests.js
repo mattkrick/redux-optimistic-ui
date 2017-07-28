@@ -54,6 +54,7 @@ test('test enhancedRootReducerNested works OK', t => {
       history: [],
       current: 0
   };
+  t.deepEqual(actual.counter1.counter, expected)
   t.deepEqual(actual.counter2.counter, expected)
 })
 
@@ -82,7 +83,7 @@ test('wraps a reducer with existing state', t => {
 
 test('wraps an immutable reducer', t => {
   const enhancedReducer = optimistic(rootReducerImmutable);
-  const actual = enhancedReducer(undefined, {});
+  const actual = enhancedReducer(undefined, INIT_ACTION);
   const expected = {
     beforeState: undefined,
     history: [],
@@ -216,6 +217,16 @@ test('begin 2, commit the second', t => {
     current: {counter: 0}
   };
   t.deepEqual(actual, expected);
+});
+
+test('attempt to commit non-existent transaction id', t => {
+  const enhancedReducer = optimistic(rootReducer);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const commit0 = makeAction('--', COMMIT, 1);
+
+  const state1 = enhancedReducer(undefined, begin0);
+  const error = t.throws(() => enhancedReducer(state1, commit0), Error);
+  t.true(error.message.indexOf('Transaction #1 does not exist') !== -1);
 });
 
 /*REVERT*/
@@ -369,6 +380,17 @@ test('revert and commit have an extra DEC', t => {
     current: {counter: -2}
   };
   t.deepEqual(actual, expected);
+});
+
+test('attempt to revert non-existent transaction id', t => {
+  const enhancedReducer = optimistic(rootReducer);
+  const begin0 = makeAction('INC', BEGIN, 0);
+  const revert0 = makeAction('--', REVERT, 1);
+
+  const state1 = enhancedReducer(undefined, begin0);
+  const error = t.throws(() => enhancedReducer(state1, revert0), Error);
+
+  t.true(error.message.indexOf('Transaction #1 does not exist') !== -1);
 });
 
 test('real world', t => {
