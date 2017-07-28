@@ -5,10 +5,8 @@ export const COMMIT = '@@optimist/COMMIT';
 export const REVERT = '@@optimist/REVERT';
 
 export const ensureState = state => {
-  if (state instanceof Object) {
-    if (Array.isArray(state.history)) {
-      return state.current;
-    }
+  if (state && Array.isArray(state.history)) {
+    return state.current;
   }
   return state;
 };
