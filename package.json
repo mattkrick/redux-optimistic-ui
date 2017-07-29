@@ -27,9 +27,7 @@
     "url": "https://github.com/mattkrick/redux-optimistic-ui/issues"
   },
   "homepage": "https://github.com/mattkrick/redux-optimistic-ui#readme",
-  "dependencies": {
-    "immutable": "^3.8.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "ava": "^0.18.1",
     "babel-cli": "^6.10.1",
@@ -39,6 +37,7 @@
     "babel-register": "^6.9.0",
     "coveralls": "^2.11.9",
     "cross-env": "^5.0.1",
+    "immutable": "^3.8.1",
     "nyc": "^6.6.1",
     "redux": "^3.6.0",
     "rimraf": "^2.5.3"
