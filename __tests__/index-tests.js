@@ -8,6 +8,7 @@ import {
   ensureState
 } from '../src/index';
 import {createStore, combineReducers} from 'redux';
+import instrument from 'redux-devtools-instrument';
 
 // while there isn't an Immutable dependency in the library anymore we want to verify backwards
 // compat with immutable wrapped reducers
@@ -429,6 +430,21 @@ test('with redux and initialState without preloadState', t => {
     const store = createStore(enhancedReducer, {
       counter: 1
     });
+    store.dispatch({type: 'INC'});
+    t.is(ensureState(store.getState().counter), 2);
+  } catch (error) {
+    t.fail(error.message)
+  }
+});
+
+test('works with preloadState and redux-devtools-instrumentation', t => {
+  const enhancedReducer = combineReducers({
+    counter: optimistic(counterReducer)
+  });
+  try {
+    const store = createStore(enhancedReducer, {
+      counter: 1
+    }, instrument((state, action) => state));
     store.dispatch({type: 'INC'});
     t.is(ensureState(store.getState().counter), 2);
   } catch (error) {

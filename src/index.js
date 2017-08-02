@@ -4,12 +4,12 @@ export const BEGIN = '@@optimist/BEGIN';
 export const COMMIT = '@@optimist/COMMIT';
 export const REVERT = '@@optimist/REVERT';
 
-export const ensureState = state => {
-  if (state && Array.isArray(state.history)) {
-    return state.current;
-  }
-  return state;
-};
+const isOptimistState = state => state && Object.keys(state).length === 3
+  && state.hasOwnProperty('beforeState')
+  && state.hasOwnProperty('history')
+  && state.hasOwnProperty('current');
+
+export const ensureState = state => isOptimistState(state) ? state.current : state;
 
 const createState = state => ({
   beforeState: undefined,
@@ -98,7 +98,7 @@ export const optimistic = (reducer, rawConfig = {}) => {
   }, rawConfig);
 
   return (state, action) => {
-    if (state === undefined || action.type === '@@redux/INIT') {
+    if (state === undefined || !isOptimistState(state)) {
       state = createState(reducer(ensureState(state), {}));
     }
     const historySize = state.history.length;
