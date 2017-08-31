@@ -6,7 +6,7 @@
 a reducer enhancer to enable type-agnostic optimistic updates
 
 ## Installation
-`npm i -S redux-optimistic-ui`
+`yarn add redux-optimistic-ui`
 
 ## A what-now?
 A reducer enhance is a function you put around a reducer.
