@@ -4,10 +4,11 @@
   "description": "a reducer enhancer to enable type-agnostic optimistic updates",
   "main": "./lib/index.js",
   "scripts": {
-    "clean": "rimraf lib",
+    "clean": "rimraf lib dist",
     "lint": "xo src/index.js --esnext --space --fix",
     "build": "babel --presets es2015,stage-0 -d lib/ src/",
-    "prepublish": "npm run clean && npm run build",
+    "build-dist": "mkdir -p dist && browserify lib/index.js -s ReduxOptimisticUI -o dist/redux-optimistic-ui.js && uglifyjs dist/redux-optimistic-ui.js -m -c -o dist/redux-optimistic-ui.min.js",
+    "prepare": "npm run clean && npm run build && npm run build-dist",
     "test": "cross-env NODE_ENV=test nyc ava __tests__/**/*.js",
     "watch": "babel -w --presets es2015,stage-0 -d lib/ src/"
   },
@@ -35,13 +36,15 @@
     "babel-preset-es2015": "^6.9.0",
     "babel-preset-stage-0": "^6.5.0",
     "babel-register": "^6.9.0",
+    "browserify": "^14.4.0",
     "coveralls": "^2.11.9",
     "cross-env": "^5.0.1",
     "immutable": "^3.8.1",
     "nyc": "^6.6.1",
     "redux": "^3.6.0",
     "redux-devtools-instrument": "^1.8.2",
-    "rimraf": "^2.5.3"
+    "rimraf": "^2.5.3",
+    "uglify-js": "^3.0.28"
   },
   "nyc": {
     "require": [
