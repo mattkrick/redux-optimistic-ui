@@ -2,4 +2,7 @@ lib
 *.log
 node_modules
 .idea
+*.iml
 .nyc_output
+coverage
+dist
