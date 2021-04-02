@@ -24,6 +24,20 @@ This makes your app feel super fast, regardless of server location or internet c
 | FSA compliant                                          | not FSA compliant                                                 |
 | must wrap your state calls in `ensureState`            | no change necessary to get your state                             |
 
+## How do optimistic actions work?
+
+- When you dispatch a `BEGIN` action:
+  - The action is dispatched normally.
+  - Your reducer should update your state with the expected outcome of the optimistic action and can optionally indicate that the change is "pending" (e.g. not fully loaded).
+- When you dispatch a `COMMIT` action:
+  - The action is dispatched normally.
+  - Your reducer should clear the "pending" flag, if you used it.
+- When you dispatch a `REVERT` action:
+  - The state is reverted to its value before the `BEGIN` action.
+  - All actions after the `BEGIN` that have been previously dispatched are re-dispatched immediately (this makes it look as though the initial `BEGIN` action never happened).
+  - The `REVERT` action is dispatched normally.
+  - Your reducer should update the state to indicate the error message to the user and clear the "pending" flag, if you used it.
+
 ## Usage
 
 ### Feed it your reducer
