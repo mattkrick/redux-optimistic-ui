@@ -64,51 +64,68 @@ import {ensureState} from 'redux-optimistic-ui'
 ensureState(getState()).counter
 ```
 
-### Write some middleware
+### Update actions
 
 Now comes the fun! Not all of your actions should be optimistic.
 Just the ones that fetch something from a server *and have a high probability of success*.
-I like real-world examples, so this middleware is a little bit longer than the bare requirements:
+We are using redux-thunk for the asynchronous logic example, but this is not required:
 
 ```js
-import {BEGIN, COMMIT, REVERT} from 'redux-optimistic-ui';
+import { BEGIN, COMMIT, REVERT } from "redux-optimistic-ui";
+import { makeRequest, getUuid } from "./helpers";
 
-//All my redux action types that are optimistic have the following suffixes, yours may vary
-const _SUCCESS = '_SUCCESS';
-const _ERROR = '_ERROR';
+export const actionTypes = {
+  CHANGE_COLOR: "CHANGE_COLOR",
+  CHANGE_COLOR_SUCCESS: "CHANGE_COLOR_SUCCESS",
+  CHANGE_COLOR_FAILURE: "CHANGE_COLOR_FAILURE"
+};
 
-//Each optimistic item will need a transaction Id to internally match the BEGIN to the COMMIT/REVERT
-let nextTransactionID = 0;
+// non-prod ready!
+function getUuid() {
+  return Math.random();
+}
 
-// That crazy redux middleware that's 3 functions deep!
-export default store => next => action => {
-  // FSA compliant
-  const {type, meta, payload} = action;
+export const actions = {
+  changeColor: (payload) => ({ type: actionTypes.CHANGE_COLOR, payload }),
+  changeColorSuccess: (payload) => ({
+    type: actionTypes.CHANGE_COLOR_SUCCESS,
+    payload
+  }),
+  changeColorFailure: (payload) => ({
+    type: actionTypes.CHANGE_COLOR_FAILURE,
+    payload
+  }),
+  // redux-thunk action creator
+  changeColorAsync: (payload) => (dispatch) => {
+    const transactionID = getUuid();
 
-  // For actions that have a high probability of failing, I don't set the flag
-  if (!meta || !meta.isOptimistic) return next(action);
+    const actionBegin = {
+      ...actions.changeColor(payload),
+      meta: { optimistic: { type: BEGIN, id: transactionID } }
+    };
 
-  // Now that we know we're optimistically updating the item, give it an ID
-  let transactionID = nextTransactionID++;
-
-  // Extend the action.meta to let it know we're beginning an optimistic update
-  next(Object.assign({}, action, {meta: {optimistic: {type: BEGIN, id: transactionID}}}));
-
-  // HTTP is boring, I like sending data over sockets, the 3rd arg is a callback
-  socket.emit(type, payload, error => {
-    // Create a redux action based on the result of the callback
-    next({
-      type: type + (error ? _ERROR : _SUCCESS),
-      error,
-      payload,
-      meta: {
-        //Here's the magic: if there was an error, revert the state, otherwise, commit it
-        optimistic: error ? {type: REVERT, id: transactionID} : {type: COMMIT, id: transactionID}
-      }
-    });
-  })
+    dispatch(actionBegin);
+    return makeRequest(dispatch)
+      .then(() => {
+        const actionRevert = {
+          ...actions.changeColorSuccess({}),
+          meta: { optimistic: { type: REVERT, id: transactionID } }
+        };
+        dispatch(actionRevert);
+      })
+      .catch(() => {
+        const actionCommit = {
+          ...actions.changeColorFailure({}),
+          meta: { optimistic: { type: COMMIT, id: transactionID } }
+        };
+        dispatch(actionCommit);
+      });
+  }
 };
 ```
+
+## Example
+Sandbox example - https://codesandbox.io/s/redux-optimistic-update-g0mrb
 
 ## Pro tips
 Not using an optimistic-ui until a certain route? Using something like `redux-undo` in other parts? Write a little something like this and call it on your asychronous route:
